@@ -35,3 +35,10 @@ out/
 
 ### VS Code ###
 .vscode/
+
+## App tmp folder
+/workspace/
+
+## Custom ignored directories
+/src/main/resources/rdfs/
+/src/main/resources/rdf/
