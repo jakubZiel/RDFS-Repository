@@ -1,6 +1,6 @@
 package com.rdfsonto.rdfsonto.service.rdf4j.download;
 
-import com.rdfsonto.rdfsonto.service.rdf4j.export.RDF4JInputOutput;
+import com.rdfsonto.rdfsonto.service.rdf4j.RDF4JInputOutput;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Value;

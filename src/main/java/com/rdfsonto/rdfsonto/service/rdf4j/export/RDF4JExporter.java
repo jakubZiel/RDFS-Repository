@@ -1,7 +1,8 @@
-package com.rdfsonto.rdfsonto.service.rdf4j;
+package com.rdfsonto.rdfsonto.service.rdf4j.export;
 
 
-import com.rdfsonto.rdfsonto.service.rdf4j.export.RDF4JInputOutput;
+import com.rdfsonto.rdfsonto.service.rdf4j.KnownPrefix;
+import com.rdfsonto.rdfsonto.service.rdf4j.RDF4JInputOutput;
 import lombok.val;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Statement;

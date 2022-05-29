@@ -1,4 +1,4 @@
-package com.rdfsonto.rdfsonto.service.rdf4j.export;
+package com.rdfsonto.rdfsonto.service.rdf4j;
 
 
 import lombok.val;
