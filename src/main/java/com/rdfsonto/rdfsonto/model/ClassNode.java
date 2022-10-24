@@ -1,7 +1,6 @@
 package com.rdfsonto.rdfsonto.model;
 
 import lombok.Getter;
-import lombok.val;
 import org.springframework.data.neo4j.core.schema.*;
 
 import java.util.HashMap;
@@ -38,7 +37,7 @@ public class ClassNode {
         props.stream()
                 .filter(prop -> !prop.startsWith("uri"))
                 .forEach(prop -> {
-                    val keyVal = prop.split(";");
+                    final var keyVal = prop.split(";");
                     properties.put(keyVal[0], keyVal[1]);
                 });
     }

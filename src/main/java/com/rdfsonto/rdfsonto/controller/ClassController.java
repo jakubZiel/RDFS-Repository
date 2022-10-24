@@ -2,7 +2,6 @@ package com.rdfsonto.rdfsonto.controller;
 
 import com.rdfsonto.rdfsonto.model.ClassNode;
 import com.rdfsonto.rdfsonto.repository.ClassNodeRepository;
-import lombok.val;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,8 +22,8 @@ public class ClassController {
 
     @GetMapping("/{id}")
     Optional<ClassNode> getClassNodeById(@PathVariable long id) {
-        val node = repository.findById(id);
-        val props = repository.getAllNodeProperties(id);
+        final var node = repository.findById(id);
+        final var props = repository.getAllNodeProperties(id);
 
         node.ifPresent(nodeVal -> nodeVal.setProperties(props));
         return node;

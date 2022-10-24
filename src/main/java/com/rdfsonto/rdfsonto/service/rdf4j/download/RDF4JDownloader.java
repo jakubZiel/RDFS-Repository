@@ -3,7 +3,6 @@ package com.rdfsonto.rdfsonto.service.rdf4j.download;
 
 import com.rdfsonto.rdfsonto.service.rdf4j.KnownPrefix;
 import com.rdfsonto.rdfsonto.service.rdf4j.RDF4JInputOutput;
-import lombok.val;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Statement;
@@ -29,6 +28,7 @@ import java.util.Set;
 
 public class RDF4JDownloader extends RDF4JInputOutput {
     private String tag;
+
     public RDF4JDownloader(RDFFormat dataFormat) {
         super(dataFormat);
     }
@@ -65,7 +65,7 @@ public class RDF4JDownloader extends RDF4JInputOutput {
         });
 
         model.forEach(statement -> {
-                    val taggedStatement = tagStatement(statement);
+                    final var taggedStatement = tagStatement(statement);
                     if (taggedStatement == null)
                         return;
                     outModel.add(taggedStatement);
@@ -73,8 +73,8 @@ public class RDF4JDownloader extends RDF4JInputOutput {
         );
 
         applyUserLabel(tag);
-        val name = generateFileName(outputFile.toString(), "-out");
-        val output = new FileOutputStream(name);
+        final var name = generateFileName(outputFile.toString(), "-out");
+        final var output = new FileOutputStream(name);
         Rio.write(outModel, output, dataFormat);
     }
 
@@ -87,13 +87,13 @@ public class RDF4JDownloader extends RDF4JInputOutput {
         if (!(validate(originalStatement.getSubject()) && validate(originalStatement.getObject())))
             return originalStatement;
 
-        val subject = (IRI) originalStatement.getSubject();
-        val predicate = originalStatement.getPredicate();
-        val object = originalStatement.getObject();
+        final var subject = (IRI) originalStatement.getSubject();
+        final var predicate = originalStatement.getPredicate();
+        final var object = originalStatement.getObject();
 
-        val sub = handleSubject(subject);
-        val pred = handlePredicate(predicate);
-        val obj = handleObject(object);
+        final var sub = handleSubject(subject);
+        final var pred = handlePredicate(predicate);
+        final var obj = handleObject(object);
 
         return Statements.statement(sub, pred, obj, null);
     }
@@ -121,8 +121,8 @@ public class RDF4JDownloader extends RDF4JInputOutput {
         RDF4JDownloader d = new RDF4JDownloader(RDFFormat.TURTLE);
 
         d.prepareRDFFileToMergeIntoNeo4j(
-                new URL("file:/media/jzielins/SD/sem7/PD2/rdfs-onto/src/main/resources/rdfs/movie.owl"),
-                Paths.get("/media/jzielins/SD/sem7/PD2/rdfs-onto/src/main/resources/rdfs/movie2.owl"),
+                new URL("file:/home/jzielins/Projects/Ontology-Editor/src/main/resources/rdfs/vw.owl"),
+                Paths.get("/home/jzielins/Projects/Ontology-Editor/src/main/resources/rdfs/vw2.owl"),
                 "projekt_123");
     }
 }

@@ -1,7 +1,6 @@
 package com.rdfsonto.rdfsonto.service.rdf4j;
 
 
-import lombok.val;
 import org.eclipse.rdf4j.model.BNode;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Model;
@@ -41,7 +40,7 @@ public abstract class RDF4JInputOutput {
     }
 
     protected void loadModel(Path outputFile) throws IOException {
-        val input = new FileInputStream(outputFile.toString());
+        final var input = new FileInputStream(outputFile.toString());
         model = Rio.parse(input, "", dataFormat);
     }
 
@@ -50,7 +49,7 @@ public abstract class RDF4JInputOutput {
     }
 
     protected String generateFileName(String fileName, String suffix) throws FileSystemException {
-        val components = fileName.split("\\.");
+        final var components = fileName.split("\\.");
 
         if (components.length != 2)
             throw new FileSystemException("Incorrect file name :" + fileName);

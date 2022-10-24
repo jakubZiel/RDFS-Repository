@@ -15,6 +15,12 @@ public interface ClassNodeRepository extends Neo4jRepository<ClassNode, Long> {
     @Query("MATCH (n:Resource) WHERE id(n) = $nodeId UNWIND keys(n) AS prop RETURN prop")
     List<String> getAllNodeProperties(@Param("nodeId") long id);
 
+    //@Query("")
+    //List<List<String>> getAllNodesProperties();
+
     @Query("MATCH (n:Resource) WHERE id(n) = $nodeId UNWIND keys(n) AS prop RETURN val: n[prop], key: prop ")
     List<Object> getAllNodeValues(@Param("nodeId") long id);
+
+    //@Query("")
+    //List<List<Object>> getAllNodesValues();
 }

@@ -42,3 +42,6 @@ out/
 ## Custom ignored directories
 /src/main/resources/rdfs/
 /src/main/resources/rdf/
+
+/docker/neo4j
+/docker/kafka

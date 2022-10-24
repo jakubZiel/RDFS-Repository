@@ -3,7 +3,6 @@ package com.rdfsonto.rdfsonto.service.rdf4j.export;
 
 import com.rdfsonto.rdfsonto.service.rdf4j.KnownPrefix;
 import com.rdfsonto.rdfsonto.service.rdf4j.RDF4JInputOutput;
-import lombok.val;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Value;
@@ -54,7 +53,7 @@ public class RDF4JExporter extends RDF4JInputOutput {
         });
 
         model.forEach(statement -> {
-            val untaggedStatement = untagStatement(statement);
+            final var untaggedStatement = untagStatement(statement);
             if (untaggedStatement == null)
                 return;
             outModel.add(untaggedStatement);
@@ -63,7 +62,7 @@ public class RDF4JExporter extends RDF4JInputOutput {
         removeUserLabel();
         outModel.removeNamespace(USER_NAMESPACE_PREFIX);
 
-        val output = new FileOutputStream(outputFile.toString());
+        final var output = new FileOutputStream(outputFile.toString());
         Rio.write(outModel, output, dataFormat);
     }
 
@@ -81,13 +80,13 @@ public class RDF4JExporter extends RDF4JInputOutput {
         if (!(validate(inputStatement.getSubject()) && validate(inputStatement.getObject())))
             return inputStatement;
 
-        val subject = (IRI) inputStatement.getSubject();
-        val predicate = inputStatement.getPredicate();
-        val object = inputStatement.getObject();
+        final var subject = (IRI) inputStatement.getSubject();
+        final var predicate = inputStatement.getPredicate();
+        final var object = inputStatement.getObject();
 
-        val sub = handleSubject(subject);
-        val pred = handlePredicate(predicate);
-        val obj = handleObject(object);
+        final var sub = handleSubject(subject);
+        final var pred = handlePredicate(predicate);
+        final var obj = handleObject(object);
 
         return Statements.statement(sub, pred, obj, null);
     }
@@ -95,8 +94,8 @@ public class RDF4JExporter extends RDF4JInputOutput {
     @Override
     protected IRI handleSubject(IRI subject) {
         if (!knownNamespaces.contains(subject.getNamespace())) {
-            val index = subject.getNamespace().lastIndexOf("_" + tag);
-            val untaggedSub = subject.getNamespace().substring(0, index);
+            final var index = subject.getNamespace().lastIndexOf("_" + tag);
+            final var untaggedSub = subject.getNamespace().substring(0, index);
             return Values.iri(untaggedSub + "#", subject.getLocalName());
         }
         return subject;
@@ -105,7 +104,7 @@ public class RDF4JExporter extends RDF4JInputOutput {
     @Override
     protected IRI handlePredicate(IRI predicate) {
         if (!knownNamespaces.contains(predicate.getNamespace())) {
-            val index = predicate.getNamespace().lastIndexOf("_" + tag);
+            final var index = predicate.getNamespace().lastIndexOf("_" + tag);
             String untaggedPred = predicate.getNamespace().substring(0, index);
             return Values.iri(untaggedPred + "#", predicate.getLocalName());
         }
@@ -117,11 +116,11 @@ public class RDF4JExporter extends RDF4JInputOutput {
         if (object.isLiteral()) {
             return object;
         }
-        val iriObject = (IRI) object;
+        final var iriObject = (IRI) object;
 
         if (!knownNamespaces.contains(iriObject.getNamespace())) {
-            val index = iriObject.getNamespace().lastIndexOf("_" + tag);
-            val untaggedObject = iriObject.getNamespace().substring(0, index);
+            final var index = iriObject.getNamespace().lastIndexOf("_" + tag);
+            final var untaggedObject = iriObject.getNamespace().substring(0, index);
             return Values.iri(untaggedObject + "#", iriObject.getLocalName());
         }
         return iriObject;
