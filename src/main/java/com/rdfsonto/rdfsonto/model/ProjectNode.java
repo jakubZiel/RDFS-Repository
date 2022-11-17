@@ -1,13 +1,16 @@
 package com.rdfsonto.rdfsonto.model;
 
 import lombok.Getter;
+
 import org.springframework.data.neo4j.core.schema.*;
 
 import java.util.Map;
 
+
 @Node("Project")
 @Getter
-public class ProjectNode {
+public class ProjectNode
+{
 
     @Id
     @GeneratedValue
@@ -22,7 +25,8 @@ public class ProjectNode {
     @CompositeProperty(prefix = "namespaces", delimiter = "__")
     Map<String, String> namespaces;
 
-    public ProjectNode(String projectName, ClassNode root) {
+    public ProjectNode(String projectName, ClassNode root)
+    {
         this.projectName = projectName;
         this.root = root;
     }

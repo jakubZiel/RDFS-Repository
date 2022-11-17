@@ -1,16 +1,18 @@
 package com.rdfsonto.rdfsonto.model;
 
 import lombok.Getter;
+
 import org.springframework.data.neo4j.core.schema.*;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+
 @Node("Resource")
 @Getter
-public class ClassNode {
-
+public class ClassNode
+{
     @Id
     @GeneratedValue
     long id;
@@ -25,20 +27,22 @@ public class ClassNode {
 
     String uri;
 
-    public ClassNode(List<String> classLabels, Map<String, ClassNode> neighbours) {
+    public ClassNode(List<String> classLabels, Map<String, ClassNode> neighbours)
+    {
         this.neighbours = neighbours;
         this.classLabels = classLabels;
     }
 
-    public void setProperties(List<String> props) {
+    public void setProperties(List<String> props)
+    {
 
         this.properties = new HashMap<>();
 
         props.stream()
-                .filter(prop -> !prop.startsWith("uri"))
-                .forEach(prop -> {
-                    final var keyVal = prop.split(";");
-                    properties.put(keyVal[0], keyVal[1]);
-                });
+            .filter(prop -> !prop.startsWith("uri"))
+            .forEach(prop -> {
+                final var keyVal = prop.split(";");
+                properties.put(keyVal[0], keyVal[1]);
+            });
     }
 }
