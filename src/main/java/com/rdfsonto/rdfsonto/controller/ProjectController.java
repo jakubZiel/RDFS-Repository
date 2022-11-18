@@ -1,6 +1,5 @@
 package com.rdfsonto.rdfsonto.controller;
 
-import java.util.Collection;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
@@ -56,9 +55,9 @@ public class ProjectController
     }
 
     @GetMapping("/all")
-    public Collection<ProjectNode> getAllProjects()
+    public ResponseEntity<List<ProjectNode>> getAllProjects()
     {
-        return projectRepository.findAll();
+        return ResponseEntity.ok(projectRepository.findAll());
     }
 
     @PostMapping
