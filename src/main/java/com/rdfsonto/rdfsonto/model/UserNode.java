@@ -1,6 +1,7 @@
 package com.rdfsonto.rdfsonto.model;
 
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 import org.springframework.data.neo4j.core.schema.*;
 
@@ -9,21 +10,18 @@ import java.util.Set;
 
 @Node("User")
 @Getter
+@RequiredArgsConstructor
 public class UserNode
 {
     @Id
     @GeneratedValue
-    long id;
+    private final long id;
 
     @Property("name")
-    String username;
+    final String username;
 
-    @Relationship(type = "OWNS", direction = Relationship.Direction.OUTGOING)
+    @Relationship(type = "OWNER", direction = Relationship.Direction.OUTGOING)
     Set<ProjectNode> projectSet;
-
-    public UserNode(String username, Set<ProjectNode> projectSet)
-    {
-        this.username = username;
-        this.projectSet = projectSet;
-    }
 }
+
+

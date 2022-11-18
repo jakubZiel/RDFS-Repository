@@ -1,19 +1,20 @@
 package com.rdfsonto.rdfsonto.repository;
 
-import com.rdfsonto.rdfsonto.model.ProjectNode;
+import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.neo4j.repository.Neo4jRepository;
 import org.springframework.data.neo4j.repository.query.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.Collection;
+import com.rdfsonto.rdfsonto.model.ProjectNode;
 
 
 public interface ProjectRepository extends Neo4jRepository<ProjectNode, Long>
 {
-
     @Query("MATCH (u:User{name: $user})-[:OWNS]->(p:Project) RETURN p")
-    Collection<ProjectNode> getProjectNodeByUser(@Param("user") String user);
+    Optional<List<ProjectNode>> findProjectNodesByUser(@Param("user") String user);
+
 
     @Query("""
         MATCH (u:User) WHERE id(u) = $userId
