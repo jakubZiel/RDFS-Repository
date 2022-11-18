@@ -15,7 +15,7 @@ public class UserNode
 {
     @Id
     @GeneratedValue
-    private final long id;
+    private final Long id;
 
     @Property("name")
     final String username;

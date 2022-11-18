@@ -12,7 +12,6 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/auth")
 public class AuthController
 {
-
     @GetMapping
     String getPassword()
     {

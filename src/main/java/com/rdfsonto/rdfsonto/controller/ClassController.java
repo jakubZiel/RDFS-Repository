@@ -18,7 +18,6 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/neo4j/class")
 public class ClassController
 {
-
     ClassNodeRepository repository;
 
     @Autowired

@@ -20,7 +20,7 @@ public class ProjectNode
 {
     @Id
     @GeneratedValue
-    private final long id;
+    private final Long id;
 
     @Property("name")
     private final String projectName;

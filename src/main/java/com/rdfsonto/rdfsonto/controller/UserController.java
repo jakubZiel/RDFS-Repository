@@ -50,26 +50,30 @@ public class UserController
     {
         if (userRepository.findByUsername(user.getUsername()).isPresent())
         {
+            log.info("User name: {} already exist. Can not be created.", user.getUsername());
             return ResponseEntity.badRequest().build();
         }
-        userRepository.save(user);
 
-        return ResponseEntity.ok(user);
+        final var created = userRepository.save(user);
+
+        return ResponseEntity.ok(created);
     }
 
     @PutMapping
-    public ResponseEntity<UserNode> update(final UserNode updatedUser)
+    public ResponseEntity<UserNode> update(final UserNode update)
     {
-        final var original = userRepository.findById(updatedUser.getId());
+        final var original = userRepository.findById(update.getId());
 
         if (original.isEmpty())
         {
-            log.info("User id: {} does not exist, can not be updated.", updatedUser.getId());
+            log.info("User id: {} does not exist, can not be updated.", update.getId());
 
             return ResponseEntity.notFound().build();
         }
 
-        return ResponseEntity.ok(null);
+        final var updated = userRepository.save(update);
+
+        return ResponseEntity.ok(updated);
     }
 
     @DeleteMapping("/{id}")
