@@ -13,5 +13,3 @@ services:
       - ./neo4j/import:/import
       - ./neo4j/logs:/logs
       - ./neo4j/plugins:/plugins
-    environment:
-      - PASSWORD=kuba1234

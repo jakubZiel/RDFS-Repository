@@ -1,6 +1,8 @@
 package com.rdfsonto.rdfsonto.model;
 
+import lombok.Builder;
 import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
 import org.springframework.data.neo4j.core.schema.*;
 
@@ -9,25 +11,20 @@ import java.util.Map;
 
 @Node("Project")
 @Getter
+@Builder(setterPrefix = "with")
+@RequiredArgsConstructor
 public class ProjectNode
 {
-
     @Id
     @GeneratedValue
-    long id;
+    private final long id;
 
     @Property("name")
-    String projectName;
+    private final String projectName;
 
-    @Relationship(type = "HAS_ROOT", direction = Relationship.Direction.OUTGOING)
-    ClassNode root;
+    @Relationship(type = "OWNER", direction = Relationship.Direction.INCOMING)
+    private UserNode owner;
 
     @CompositeProperty(prefix = "namespaces", delimiter = "__")
-    Map<String, String> namespaces;
-
-    public ProjectNode(String projectName, ClassNode root)
-    {
-        this.projectName = projectName;
-        this.root = root;
-    }
+    private Map<String, String> namespaces;
 }

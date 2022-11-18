@@ -35,7 +35,6 @@ public class ClassNode
 
     public void setProperties(List<String> props)
     {
-
         this.properties = new HashMap<>();
 
         props.stream()
