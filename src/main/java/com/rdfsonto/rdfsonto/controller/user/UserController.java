@@ -1,7 +1,6 @@
-package com.rdfsonto.rdfsonto.controller;
+package com.rdfsonto.rdfsonto.controller.user;
 
-import java.util.Collection;
-import java.util.Optional;
+import java.util.List;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -12,8 +11,9 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.rdfsonto.rdfsonto.model.UserNode;
-import com.rdfsonto.rdfsonto.repository.UserRepository;
+import com.rdfsonto.rdfsonto.repository.user.UserNode;
+import com.rdfsonto.rdfsonto.repository.project.ProjectRepository;
+import com.rdfsonto.rdfsonto.repository.user.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,23 +26,26 @@ import lombok.extern.slf4j.Slf4j;
 public class UserController
 {
     private final UserRepository userRepository;
+    private final ProjectRepository projectRepository;
 
     @GetMapping("/{id}")
-    public Optional<UserNode> getUserById(@PathVariable final long id)
+    public ResponseEntity<UserNode> getUserById(@PathVariable final long id)
     {
-        return userRepository.findById(id);
-    }
+        final var user = userRepository.findById(id);
 
-    @GetMapping("/by_name/{username}")
-    public Optional<UserNode> getUserByName(@PathVariable final String username)
-    {
-        return userRepository.findByUsername(username);
+        if (user.isEmpty())
+        {
+            log.info("User id: {} does not exist.", id);
+            return ResponseEntity.notFound().build();
+        }
+
+        return ResponseEntity.of(user);
     }
 
     @GetMapping
-    public Collection<UserNode> getAllUsers()
+    public ResponseEntity<List<UserNode>> getAllUsers()
     {
-        return userRepository.findAll();
+        return ResponseEntity.ok(userRepository.findAll());
     }
 
     @PostMapping
@@ -87,6 +90,9 @@ public class UserController
             return ResponseEntity.notFound().build();
         }
 
+        final var deletedUser = user.get();
+
+        projectRepository.deleteAll(deletedUser.getProjectSet());
         userRepository.deleteById(id);
 
         return ResponseEntity.noContent().build();

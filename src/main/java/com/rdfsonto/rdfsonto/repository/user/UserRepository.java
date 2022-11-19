@@ -1,6 +1,4 @@
-package com.rdfsonto.rdfsonto.repository;
-
-import com.rdfsonto.rdfsonto.model.UserNode;
+package com.rdfsonto.rdfsonto.repository.user;
 
 import org.springframework.data.neo4j.repository.Neo4jRepository;
 import org.springframework.data.neo4j.repository.query.Query;

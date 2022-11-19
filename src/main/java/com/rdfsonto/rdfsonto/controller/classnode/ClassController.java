@@ -1,7 +1,7 @@
-package com.rdfsonto.rdfsonto.controller;
+package com.rdfsonto.rdfsonto.controller.classnode;
 
-import com.rdfsonto.rdfsonto.model.ClassNode;
-import com.rdfsonto.rdfsonto.repository.ClassNodeRepository;
+import com.rdfsonto.rdfsonto.repository.classnode.ClassNode;
+import com.rdfsonto.rdfsonto.repository.classnode.ClassNodeRepository;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;

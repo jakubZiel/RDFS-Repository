@@ -1,4 +1,4 @@
-package com.rdfsonto.rdfsonto.model;
+package com.rdfsonto.rdfsonto.repository.classnode;
 
 import lombok.Getter;
 

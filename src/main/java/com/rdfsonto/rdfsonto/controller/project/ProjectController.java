@@ -1,4 +1,4 @@
-package com.rdfsonto.rdfsonto.controller;
+package com.rdfsonto.rdfsonto.controller.project;
 
 import java.util.List;
 
@@ -11,9 +11,9 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.rdfsonto.rdfsonto.model.ProjectNode;
-import com.rdfsonto.rdfsonto.repository.ProjectRepository;
-import com.rdfsonto.rdfsonto.repository.UserRepository;
+import com.rdfsonto.rdfsonto.repository.project.ProjectNode;
+import com.rdfsonto.rdfsonto.repository.project.ProjectRepository;
+import com.rdfsonto.rdfsonto.repository.user.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -51,10 +51,10 @@ public class ProjectController
             return ResponseEntity.notFound().build();
         }
 
-        return ResponseEntity.of(projectRepository.findProjectNodesByUser(user));
+        return ResponseEntity.ok(projectRepository.findProjectNodesByUser(user));
     }
 
-    @GetMapping("/all")
+    @GetMapping
     public ResponseEntity<List<ProjectNode>> getAllProjects()
     {
         return ResponseEntity.ok(projectRepository.findAll());
@@ -71,7 +71,7 @@ public class ProjectController
             return ResponseEntity.notFound().build();
         }
 
-        if (projectRepository.findProjectByNameAndUser(projectName, userId) != null)
+        if (projectRepository.findProjectByNameAndUser(projectName, userId).isPresent())
         {
             log.info("Project name: {} already exists for an user id: {}", projectName, userId);
             return ResponseEntity.badRequest().build();
@@ -82,7 +82,12 @@ public class ProjectController
             .withProjectName(projectName)
             .build();
 
-        return ResponseEntity.ok(project);
+        final var saved = projectRepository.save(project);
+
+        owner.get().getProjectSet().add(saved);
+        userRepository.save(owner.get());
+
+        return ResponseEntity.ok(saved);
     }
 
     @PutMapping

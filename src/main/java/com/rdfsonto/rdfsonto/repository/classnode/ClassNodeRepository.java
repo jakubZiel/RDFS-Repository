@@ -1,11 +1,11 @@
-package com.rdfsonto.rdfsonto.repository;
+package com.rdfsonto.rdfsonto.repository.classnode;
 
-import com.rdfsonto.rdfsonto.model.ClassNode;
+import java.util.List;
+
 import org.springframework.data.neo4j.repository.Neo4jRepository;
 import org.springframework.data.neo4j.repository.query.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.List;
 
 public interface ClassNodeRepository extends Neo4jRepository<ClassNode, Long> {
 
