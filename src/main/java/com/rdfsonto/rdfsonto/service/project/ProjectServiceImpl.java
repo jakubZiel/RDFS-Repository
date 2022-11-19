@@ -19,14 +19,13 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class ProjectServiceImpl implements ProjectService
 {
-
     private final ProjectRepository projectRepository;
     private final UserRepository userRepository;
 
     @Override
     public Optional<ProjectNode> findById(final long projectId)
     {
-        return Optional.empty();
+        return projectRepository.findById(projectId);
     }
 
     @Override
