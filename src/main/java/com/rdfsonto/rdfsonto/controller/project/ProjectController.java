@@ -77,12 +77,8 @@ public class ProjectController
             return ResponseEntity.badRequest().build();
         }
 
-        final var project = ProjectNode.builder()
-            .withOwner(owner.get())
-            .withProjectName(projectName)
-            .build();
 
-        final var saved = projectService.save(project);
+        final var saved = projectService.save(projectName, owner.get());
 
         return ResponseEntity.ok(saved);
     }
@@ -98,7 +94,7 @@ public class ProjectController
             return ResponseEntity.notFound().build();
         }
 
-        final var afterUpdate = projectService.save(updatedProject);
+        final var afterUpdate = projectService.update(updatedProject);
 
         return ResponseEntity.ok(afterUpdate);
     }

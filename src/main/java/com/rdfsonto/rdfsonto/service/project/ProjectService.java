@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Optional;
 
 import com.rdfsonto.rdfsonto.repository.project.ProjectNode;
+import com.rdfsonto.rdfsonto.repository.user.UserNode;
 
 
 public interface ProjectService
@@ -16,7 +17,9 @@ public interface ProjectService
 
     List<ProjectNode> findAll();
 
-    ProjectNode save(ProjectNode project);
+    ProjectNode save(String projectName, UserNode user);
+
+    ProjectNode update(ProjectNode update);
 
     void delete(ProjectNode project);
 }

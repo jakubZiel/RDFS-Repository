@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 
 import com.rdfsonto.rdfsonto.repository.project.ProjectNode;
 import com.rdfsonto.rdfsonto.repository.project.ProjectRepository;
+import com.rdfsonto.rdfsonto.repository.user.UserNode;
+import com.rdfsonto.rdfsonto.repository.user.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,7 +19,9 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class ProjectServiceImpl implements ProjectService
 {
+
     private final ProjectRepository projectRepository;
+    private final UserRepository userRepository;
 
     @Override
     public Optional<ProjectNode> findById(final long projectId)
@@ -44,9 +48,23 @@ public class ProjectServiceImpl implements ProjectService
     }
 
     @Override
-    public ProjectNode save(final ProjectNode project)
+    public ProjectNode save(final String projectName, final UserNode user)
     {
-        return projectRepository.save(project);
+        final var project = ProjectNode.builder()
+            .withProjectName(projectName)
+            .build();
+
+        user.getProjectSet().add(project);
+        userRepository.save(user);
+
+        return projectRepository.findProjectByNameAndUserId(projectName, user.getId())
+            .orElseThrow();
+    }
+
+    @Override
+    public ProjectNode update(final ProjectNode update)
+    {
+        return projectRepository.save(update);
     }
 
     @Override
