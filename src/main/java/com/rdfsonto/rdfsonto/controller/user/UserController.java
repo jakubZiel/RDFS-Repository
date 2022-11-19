@@ -12,8 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.rdfsonto.rdfsonto.repository.user.UserNode;
-import com.rdfsonto.rdfsonto.repository.project.ProjectRepository;
-import com.rdfsonto.rdfsonto.repository.user.UserRepository;
+import com.rdfsonto.rdfsonto.service.user.UserService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,13 +24,12 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/neo4j/user")
 public class UserController
 {
-    private final UserRepository userRepository;
-    private final ProjectRepository projectRepository;
+    private final UserService userService;
 
     @GetMapping("/{id}")
     public ResponseEntity<UserNode> getUserById(@PathVariable final long id)
     {
-        final var user = userRepository.findById(id);
+        final var user = userService.findById(id);
 
         if (user.isEmpty())
         {
@@ -45,19 +43,19 @@ public class UserController
     @GetMapping
     public ResponseEntity<List<UserNode>> getAllUsers()
     {
-        return ResponseEntity.ok(userRepository.findAll());
+        return ResponseEntity.ok(userService.findAll());
     }
 
     @PostMapping
     public ResponseEntity<UserNode> create(final UserNode user)
     {
-        if (userRepository.findByUsername(user.getUsername()).isPresent())
+        if (userService.findByUsername(user.getUsername()).isPresent())
         {
             log.info("User name: {} already exist. Can not be created.", user.getUsername());
             return ResponseEntity.badRequest().build();
         }
 
-        final var created = userRepository.save(user);
+        final var created = userService.save(user);
 
         return ResponseEntity.ok(created);
     }
@@ -65,7 +63,7 @@ public class UserController
     @PutMapping
     public ResponseEntity<UserNode> update(final UserNode update)
     {
-        final var original = userRepository.findById(update.getId());
+        final var original = userService.findById(update.getId());
 
         if (original.isEmpty())
         {
@@ -74,15 +72,15 @@ public class UserController
             return ResponseEntity.notFound().build();
         }
 
-        final var updated = userRepository.save(update);
+        final var updated = userService.save(update);
 
         return ResponseEntity.ok(updated);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<UserNode> delete(@PathVariable final long id)
+    public ResponseEntity<?> delete(@PathVariable final long id)
     {
-        final var user = userRepository.findById(id);
+        final var user = userService.findById(id);
 
         if (user.isEmpty())
         {
@@ -90,10 +88,7 @@ public class UserController
             return ResponseEntity.notFound().build();
         }
 
-        final var deletedUser = user.get();
-
-        projectRepository.deleteAll(deletedUser.getProjectSet());
-        userRepository.deleteById(id);
+        userService.delete(user.get());
 
         return ResponseEntity.noContent().build();
     }

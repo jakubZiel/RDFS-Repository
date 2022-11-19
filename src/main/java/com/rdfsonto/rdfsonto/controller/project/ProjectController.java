@@ -12,8 +12,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.rdfsonto.rdfsonto.repository.project.ProjectNode;
-import com.rdfsonto.rdfsonto.repository.project.ProjectRepository;
-import com.rdfsonto.rdfsonto.repository.user.UserRepository;
+import com.rdfsonto.rdfsonto.service.project.ProjectService;
+import com.rdfsonto.rdfsonto.service.user.UserService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,13 +25,13 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/neo4j/project")
 public class ProjectController
 {
-    final private ProjectRepository projectRepository;
-    final private UserRepository userRepository;
+    final private ProjectService projectService;
+    final private UserService userService;
 
     @GetMapping("/{id}")
     public ResponseEntity<ProjectNode> getProjectById(@PathVariable final long id)
     {
-        final var project = projectRepository.findById(id);
+        final var project = projectService.findById(id);
 
         if (project.isEmpty())
         {
@@ -45,25 +45,25 @@ public class ProjectController
     @GetMapping("/all/{user}")
     public ResponseEntity<List<ProjectNode>> getAllProjectsByUser(@PathVariable final String user)
     {
-        if (userRepository.findByUsername(user).isEmpty())
+        if (userService.findByUsername(user).isEmpty())
         {
             log.info("User name: {} does not exist. Can not get all projects", user);
             return ResponseEntity.notFound().build();
         }
 
-        return ResponseEntity.ok(projectRepository.findProjectNodesByUser(user));
+        return ResponseEntity.ok(projectService.findProjectNodesByUsername(user));
     }
 
     @GetMapping
     public ResponseEntity<List<ProjectNode>> getAllProjects()
     {
-        return ResponseEntity.ok(projectRepository.findAll());
+        return ResponseEntity.ok(projectService.findAll());
     }
 
     @PostMapping
     public ResponseEntity<ProjectNode> create(final String projectName, final long userId)
     {
-        final var owner = userRepository.findById(userId);
+        final var owner = userService.findById(userId);
 
         if (owner.isEmpty())
         {
@@ -71,7 +71,7 @@ public class ProjectController
             return ResponseEntity.notFound().build();
         }
 
-        if (projectRepository.findProjectByNameAndUser(projectName, userId).isPresent())
+        if (projectService.findProjectByNameAndUserId(projectName, userId).isPresent())
         {
             log.info("Project name: {} already exists for an user id: {}", projectName, userId);
             return ResponseEntity.badRequest().build();
@@ -82,10 +82,7 @@ public class ProjectController
             .withProjectName(projectName)
             .build();
 
-        final var saved = projectRepository.save(project);
-
-        owner.get().getProjectSet().add(saved);
-        userRepository.save(owner.get());
+        final var saved = projectService.save(project);
 
         return ResponseEntity.ok(saved);
     }
@@ -93,7 +90,7 @@ public class ProjectController
     @PutMapping
     public ResponseEntity<ProjectNode> update(final ProjectNode updatedProject)
     {
-        final var original = projectRepository.findById(updatedProject.getId());
+        final var original = projectService.findById(updatedProject.getId());
 
         if (original.isEmpty())
         {
@@ -101,7 +98,7 @@ public class ProjectController
             return ResponseEntity.notFound().build();
         }
 
-        final var afterUpdate = projectRepository.save(updatedProject);
+        final var afterUpdate = projectService.save(updatedProject);
 
         return ResponseEntity.ok(afterUpdate);
     }
@@ -109,14 +106,15 @@ public class ProjectController
     @DeleteMapping("/{id}")
     public ResponseEntity<ProjectNode> delete(@PathVariable final long id)
     {
-        final var project = projectRepository.findById(id);
+        final var project = projectService.findById(id);
 
         if (project.isEmpty())
         {
             log.info("Project id: {} can not be deleted, because it does not exist", id);
+            return ResponseEntity.notFound().build();
         }
 
-        projectRepository.deleteById(id);
+        projectService.delete(project.get());
 
         return ResponseEntity.noContent().build();
     }
