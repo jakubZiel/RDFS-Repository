@@ -1,16 +1,13 @@
 package com.rdfsonto.rdfsonto.service.project;
 
-import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
 import com.rdfsonto.rdfsonto.repository.project.ProjectNode;
 import com.rdfsonto.rdfsonto.repository.project.ProjectRepository;
 import com.rdfsonto.rdfsonto.repository.user.UserNode;
-import com.rdfsonto.rdfsonto.repository.user.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,7 +19,6 @@ import lombok.extern.slf4j.Slf4j;
 public class ProjectServiceImpl implements ProjectService
 {
     private final ProjectRepository projectRepository;
-    private final UserRepository userRepository;
 
     @Override
     public Optional<ProjectNode> findById(final long projectId)
@@ -72,7 +68,7 @@ public class ProjectServiceImpl implements ProjectService
     @Override
     public void delete(final ProjectNode project)
     {
-        if (projectRepository.existsById(project.getId()))
+        if (projectRepository.findById(project.getId()).isEmpty())
         {
             log.warn("Attempted to deleted non-existing project id: {}", project.getId());
             return;

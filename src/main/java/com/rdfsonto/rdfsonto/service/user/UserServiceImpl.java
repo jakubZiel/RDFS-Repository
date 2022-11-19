@@ -48,7 +48,7 @@ public class UserServiceImpl implements UserService
     @Override
     public void delete(final UserNode user)
     {
-        if (userRepository.existsById(user.getId()))
+        if (userRepository.findById(user.getId()).isEmpty())
         {
             log.warn("Attempted to deleted non-existing user id: {}", user.getId());
             return;

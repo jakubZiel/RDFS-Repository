@@ -42,16 +42,16 @@ public class ProjectController
         return ResponseEntity.of(project);
     }
 
-    @GetMapping("/all/{user}")
-    public ResponseEntity<List<ProjectNode>> getAllProjectsByUser(@PathVariable final String user)
+    @GetMapping("/all/{username}")
+    public ResponseEntity<List<ProjectNode>> getAllProjectsByUser(@PathVariable final String username)
     {
-        if (userService.findByUsername(user).isEmpty())
+        if (userService.findByUsername(username).isEmpty())
         {
-            log.info("User name: {} does not exist. Can not get all projects", user);
+            log.info("User name: {} does not exist. Can not get all projects", username);
             return ResponseEntity.notFound().build();
         }
 
-        return ResponseEntity.ok(projectService.findProjectNodesByUsername(user));
+        return ResponseEntity.ok(projectService.findProjectNodesByUsername(username));
     }
 
     @GetMapping
