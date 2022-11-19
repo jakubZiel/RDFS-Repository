@@ -18,5 +18,5 @@ public interface ProjectRepository extends Neo4jRepository<ProjectNode, Long>
         MATCH (u:User) WHERE id(u) = $userId
         MATCH (p:Project {name: $projectName})<-[:OWNS]-(u)
         RETURN p""")
-    Optional<ProjectNode> findProjectByNameAndUser(@Param("projectName") String projectName, @Param("userId") long userId);
+    Optional<ProjectNode> findProjectByNameAndUserId(@Param("projectName") String projectName, @Param("userId") long userId);
 }
