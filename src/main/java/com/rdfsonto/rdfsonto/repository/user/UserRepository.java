@@ -6,6 +6,8 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 
+import com.rdfsonto.rdfsonto.repository.project.ProjectNode;
+
 
 public interface UserRepository extends Neo4jRepository<UserNode, Long>
 {

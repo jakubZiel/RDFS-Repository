@@ -20,7 +20,7 @@ public interface ProjectRepository extends Neo4jRepository<ProjectNode, Long>
 
     @Query("""
         MATCH (u:User) WHERE id(u) = $userId
-        MATCH (p:Project {name: $projectName})<-[:OWNS]-(u)
+        MATCH (p:Project {name: $projectName})<-[:OWNER]-(u)
         RETURN p, id(u) as ownerId
         """)
     Optional<ProjectNode> findProjectByNameAndUserId(@Param("projectName") String projectName, @Param("userId") long userId);
@@ -34,9 +34,17 @@ public interface ProjectRepository extends Neo4jRepository<ProjectNode, Long>
 
     @NonNull
     @Query("""
-        MATCH (p:Project)<-[:OWNS]-(u)
+        MATCH (p:Project)<-[:OWNER]-(u)
         WHERE id(p) = $projectId
         RETURN p, id(u) as ownerId
         """)
     Optional<ProjectNode> findById(@NonNull Long projectId);
+
+    @Query("""
+        MATCH (p:Project) WHERE id(p) = $projectId WITH p
+        MATCH (u:User) WHERE id(u) = $userId WITH u, p
+        CREATE (u)-[:OWNER]->(p)
+        RETURN p, id(u) as ownerId
+        """)
+    Optional<ProjectNode> addProjectToUser(@Param("projectId") Long projectId, @Param("userId") Long userId);
 }

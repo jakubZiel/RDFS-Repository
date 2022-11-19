@@ -9,6 +9,7 @@ import org.springframework.data.neo4j.core.schema.Node;
 import org.springframework.data.neo4j.core.schema.Property;
 
 import lombok.Builder;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -16,6 +17,7 @@ import lombok.Setter;
 @Node("Project")
 @Setter
 @Getter
+@EqualsAndHashCode
 @Builder(setterPrefix = "with")
 public class ProjectNode
 {
@@ -23,11 +25,13 @@ public class ProjectNode
     @GeneratedValue
     private final Long id;
 
+    private Long ownerId;
+
     @Property("name")
+    @EqualsAndHashCode.Exclude
     private final String projectName;
 
-    private final Long ownerId;
-
+    @EqualsAndHashCode.Exclude
     @CompositeProperty(prefix = "namespaces", delimiter = "__")
     private Map<String, String> namespaces;
 }

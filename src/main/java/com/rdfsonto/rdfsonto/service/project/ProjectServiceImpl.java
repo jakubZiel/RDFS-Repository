@@ -1,7 +1,9 @@
 package com.rdfsonto.rdfsonto.service.project;
 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
@@ -53,8 +55,9 @@ public class ProjectServiceImpl implements ProjectService
             .withProjectName(projectName)
             .build();
 
-        user.getProjectSet().add(project);
-        userRepository.save(user);
+        final var saved = projectRepository.save(project);
+
+        projectRepository.addProjectToUser(saved.getId(), user.getId());
 
         return projectRepository.findProjectByNameAndUserId(projectName, user.getId())
             .orElseThrow();
