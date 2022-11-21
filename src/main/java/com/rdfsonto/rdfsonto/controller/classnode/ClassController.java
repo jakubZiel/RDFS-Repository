@@ -1,30 +1,29 @@
 package com.rdfsonto.rdfsonto.controller.classnode;
 
-import com.rdfsonto.rdfsonto.repository.classnode.ClassNode;
-import com.rdfsonto.rdfsonto.repository.classnode.ClassNodeRepository;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
 import java.util.Collection;
 import java.util.Optional;
 
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.rdfsonto.rdfsonto.repository.classnode.ClassNode;
+import com.rdfsonto.rdfsonto.repository.classnode.ClassNodeRepository;
+
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 
 @Slf4j
 @RestController
+@RequiredArgsConstructor
 @RequestMapping("/neo4j/class")
 public class ClassController
 {
-    ClassNodeRepository repository;
-
-    @Autowired
-    public ClassController(ClassNodeRepository repository)
-    {
-        this.repository = repository;
-    }
+    private final ClassNodeRepository repository;
 
     @GetMapping("/{id}")
     Optional<ClassNode> getClassNodeById(@PathVariable long id)

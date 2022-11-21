@@ -1,8 +1,8 @@
 package com.rdfsonto.rdfsonto.service.rdf4j.download;
 
-
 import com.rdfsonto.rdfsonto.service.rdf4j.KnownPrefix;
 import com.rdfsonto.rdfsonto.service.rdf4j.RDF4JInputOutput;
+
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Statement;
@@ -26,14 +26,18 @@ import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.Set;
 
-public class RDF4JDownloader extends RDF4JInputOutput {
+
+public class RDF4JDownloadService extends RDF4JInputOutput
+{
     private String tag;
 
-    public RDF4JDownloader(RDFFormat dataFormat) {
+    public RDF4JDownloadService(RDFFormat dataFormat)
+    {
         super(dataFormat);
     }
 
-    public void prepareRDFFileToMergeIntoNeo4j(URL inputURL, Path outputFile, String tag) throws IOException {
+    public void prepareRDFFileToMergeIntoNeo4j(URL inputURL, Path outputFile, String tag) throws IOException
+    {
         outModel = new ModelBuilder().build();
         this.tag = tag;
         downloadFile(inputURL, outputFile);
@@ -41,35 +45,42 @@ public class RDF4JDownloader extends RDF4JInputOutput {
         saveMergeReadyModel(outputFile);
     }
 
-    private void downloadFile(URL inputURL, Path outputFile) throws IOException {
+    private void downloadFile(URL inputURL, Path outputFile) throws IOException
+    {
         ReadableByteChannel readableByteChannel = Channels.newChannel(inputURL.openStream());
         FileOutputStream fileOutputStream = new FileOutputStream(outputFile.toString());
         fileOutputStream.getChannel().transferFrom(readableByteChannel, 0, Long.MAX_VALUE);
         fileOutputStream.close();
     }
 
-    private void saveMergeReadyModel(Path outputFile) throws FileNotFoundException, FileSystemException {
+    private void saveMergeReadyModel(Path outputFile) throws FileNotFoundException, FileSystemException
+    {
 
         model.setNamespace(USER_NAMESPACE_PREFIX, USER_NAMESPACE);
 
         model.getNamespaces().forEach(namespace -> {
-            if (KnownPrefix.isKnownPrefix(namespace.getPrefix())) {
+            if (KnownPrefix.isKnownPrefix(namespace.getPrefix()))
+            {
                 outModel.setNamespace(namespace);
                 knownNamespaces.add(namespace.getName());
-            } else {
+            }
+            else
+            {
                 outModel.setNamespace(
-                        namespace.getPrefix(),
-                        namespace.getName().replaceAll("#", "_" + tag + "#")
+                    namespace.getPrefix(),
+                    namespace.getName().replaceAll("#", "_" + tag + "#")
                 );
             }
         });
 
         model.forEach(statement -> {
-                    final var taggedStatement = tagStatement(statement);
-                    if (taggedStatement == null)
-                        return;
-                    outModel.add(taggedStatement);
-                }
+                final var taggedStatement = tagStatement(statement);
+            if (taggedStatement == null)
+            {
+                return;
+            }
+                outModel.add(taggedStatement);
+            }
         );
 
         applyUserLabel(tag);
@@ -78,14 +89,18 @@ public class RDF4JDownloader extends RDF4JInputOutput {
         Rio.write(outModel, output, dataFormat);
     }
 
-    private void applyUserLabel(String label) {
+    private void applyUserLabel(String label)
+    {
         Set<Resource> set = new HashSet<>(outModel.subjects());
         set.forEach(sub -> outModel.add(sub, RDF.TYPE, Values.iri(USER_NAMESPACE, label)));
     }
 
-    protected Statement tagStatement(Statement originalStatement) {
+    protected Statement tagStatement(Statement originalStatement)
+    {
         if (!(validate(originalStatement.getSubject()) && validate(originalStatement.getObject())))
+        {
             return originalStatement;
+        }
 
         final var subject = (IRI) originalStatement.getSubject();
         final var predicate = originalStatement.getPredicate();
@@ -99,30 +114,34 @@ public class RDF4JDownloader extends RDF4JInputOutput {
     }
 
     @Override
-    protected IRI handleSubject(IRI subject) {
+    protected IRI handleSubject(IRI subject)
+    {
         return knownNamespaces.contains(subject.getNamespace()) ? subject :
-                Values.iri(subject.getNamespace().replaceAll("#", "_" + tag + "#"), subject.getLocalName());
+            Values.iri(subject.getNamespace().replaceAll("#", "_" + tag + "#"), subject.getLocalName());
     }
 
     @Override
-    protected IRI handlePredicate(IRI predicate) {
+    protected IRI handlePredicate(IRI predicate)
+    {
         return knownNamespaces.contains(predicate.getNamespace()) ? predicate :
-                Values.iri(predicate.getNamespace().replaceAll("#", "_" + tag + "#"), predicate.getLocalName());
+            Values.iri(predicate.getNamespace().replaceAll("#", "_" + tag + "#"), predicate.getLocalName());
     }
 
     @Override
-    protected Value handleObject(Value object) {
+    protected Value handleObject(Value object)
+    {
         return object.isLiteral() ? object :
-                knownNamespaces.contains(((IRI) object).getNamespace()) ? object :
-                        Values.iri(((IRI) object).getNamespace().replaceAll("#", "_" + tag + "#"), ((IRI) object).getLocalName());
+            knownNamespaces.contains(((IRI) object).getNamespace()) ? object :
+                Values.iri(((IRI) object).getNamespace().replaceAll("#", "_" + tag + "#"), ((IRI) object).getLocalName());
     }
 
-    public static void main(String[] args) throws IOException {
-        RDF4JDownloader d = new RDF4JDownloader(RDFFormat.TURTLE);
+    public static void main(String[] args) throws IOException
+    {
+        RDF4JDownloadService d = new RDF4JDownloadService(RDFFormat.TURTLE);
 
         d.prepareRDFFileToMergeIntoNeo4j(
-                new URL("file:/home/jzielins/Projects/Ontology-Editor/src/main/resources/rdfs/vw.owl"),
-                Paths.get("/home/jzielins/Projects/Ontology-Editor/src/main/resources/rdfs/vw2.owl"),
-                "projekt_123");
+            new URL("file:/home/jzielins/Projects/Ontology-Editor/src/main/resources/rdfs/vw.owl"),
+            Paths.get("/home/jzielins/Projects/Ontology-Editor/src/main/resources/rdfs/vw2.owl"),
+            "projekt_123");
     }
 }

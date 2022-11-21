@@ -5,8 +5,10 @@ import lombok.Getter;
 
 import java.util.Arrays;
 
+
 @AllArgsConstructor
-public enum KnownPrefix {
+public enum KnownPrefix
+{
 
     RDF("rdf"),
     OWL("owl"),
@@ -18,13 +20,15 @@ public enum KnownPrefix {
     @Getter
     private final String prefix;
 
-    public static boolean isKnownPrefix(final String prefix) {
+    public static boolean isKnownPrefix(final String prefix)
+    {
         return Arrays.stream(values())
-                .anyMatch(knownPrefix -> prefix.equals(knownPrefix.getPrefix()));
+            .anyMatch(knownPrefix -> prefix.equals(knownPrefix.getPrefix()));
     }
 
     @Override
-    public String toString() {
+    public String toString()
+    {
         return prefix;
     }
 }

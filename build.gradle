@@ -19,24 +19,23 @@ repositories {
 }
 
 dependencies {
-    implementation 'org.springframework.boot:spring-boot-starter-parent:2.4.0'
+
+    implementation 'org.springframework.boot:spring-boot-starter-parent:2.7.5'
     implementation 'org.springframework.boot:spring-boot-starter-data-neo4j'
     implementation 'org.springframework.boot:spring-boot-starter-data-rest'
     implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.session:spring-session-core'
 
-    implementation 'org.eclipse.rdf4j:rdf4j-rio-rdfxml:4.0.0'
-    implementation 'org.eclipse.rdf4j:rdf4j-rio-turtle:4.0.0'
+    implementation 'org.eclipse.rdf4j:rdf4j-rio-rdfxml:4.2.0'
+    implementation 'org.eclipse.rdf4j:rdf4j-rio-turtle:4.2.0'
 
-    implementation 'org.neo4j:neo4j-ogm-core:3.2.32'
-    implementation 'org.neo4j:neo4j-ogm-bolt-driver:3.2.32'
+    implementation 'org.neo4j:neo4j-ogm-core:3.2.38'
+    implementation 'org.neo4j:neo4j-ogm-bolt-driver:3.2.38'
 
     implementation 'io.springfox:springfox-boot-starter:3.0.0'
     implementation 'io.springfox:springfox-swagger2:3.0.0'
-    implementation 'io.springfox:springfox-swagger-ui:2.9.2'
-
-    implementation 'org.apache.jena:jena-core:4.5.0'
+    implementation 'io.springfox:springfox-swagger-ui:3.0.0'
 
     compileOnly 'org.projectlombok:lombok'
     developmentOnly 'org.springframework.boot:spring-boot-devtools'
@@ -45,7 +44,11 @@ dependencies {
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
     testImplementation 'org.testcontainers:junit-jupiter:1.17.4'
     testImplementation "org.testcontainers:neo4j:1.17.6"
+    testImplementation 'org.springframework.security:spring-security-test'
 
+
+    implementation 'org.springframework.boot:spring-boot-starter-oauth2-client'
+    implementation 'org.springframework.boot:spring-boot-starter-security'
 
     runtimeOnly "com.h2database:h2"
 }
@@ -53,11 +56,11 @@ dependencies {
 tasks.named('test') {
     useJUnitPlatform()
 }
-   
-jar {  
-    manifest {  
-        attributes(  
+
+jar {
+    manifest {
+        attributes(
                 'Main-Class': 'com.rdfsonto.rdfsonto.RdfsOntoApplication'
         )
-    }  
+    }
 }  
