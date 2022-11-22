@@ -22,11 +22,12 @@ import net.minidev.json.parser.ParseException;
 @RequiredArgsConstructor
 class AuthKeycloakClient
 {
-    @Value("${custom.keycloak.client.secret}")
-    private static String CLIENT_SECRET;
     private final RestTemplate restTemplate;
     private final JSONParser jsonParser;
+    @Value("${custom.keycloak.client.secret}")
+    private String CLIENT_SECRET;
     private static final String CLIENT_ID = "admin-cli";
+
     private static final String KEYCLOAK_ACCESS_TOKEN_URL = "http://localhost:8888/auth/realms/ontology-editor/protocol/openid-connect/token";
     private static final String KEYCLOAK_CREATE_USER_URL = "http://localhost:8888/auth/admin/realms/ontology-editor/users";
     private static final String CREATE_KEYCLOAK_USER_REQUEST_BODY_TEMPLATE = """

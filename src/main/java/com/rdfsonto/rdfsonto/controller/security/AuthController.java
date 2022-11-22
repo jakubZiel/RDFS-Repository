@@ -6,6 +6,8 @@ import javax.servlet.http.HttpServletRequest;
 import org.apache.commons.validator.routines.EmailValidator;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -34,8 +36,8 @@ public class AuthController
         request.logout();
     }
 
-    @GetMapping("/register")
-    public ResponseEntity<?> registerNewUser(final KeycloakUser keycloakUserRequest)
+    @PostMapping("/register")
+    public ResponseEntity<?> registerNewUser(@RequestBody final KeycloakUser keycloakUserRequest)
     {
         if (!validate(keycloakUserRequest))
         {

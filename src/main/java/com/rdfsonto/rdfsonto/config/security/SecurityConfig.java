@@ -31,6 +31,8 @@ public class SecurityConfig extends KeycloakWebSecurityConfigurerAdapter
     {
         super.configure(http);
 
+        http.cors().and().csrf().disable();
+
         http.authorizeRequests()
             .antMatchers("/neo4j/*")
             .hasRole("USER")
