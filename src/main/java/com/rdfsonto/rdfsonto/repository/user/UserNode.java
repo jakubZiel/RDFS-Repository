@@ -27,6 +27,8 @@ public class UserNode
     @GeneratedValue
     private final Long id;
 
+    final String keycloakId;
+
     @Property("name")
     final String username;
 

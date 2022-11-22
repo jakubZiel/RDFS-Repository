@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import com.rdfsonto.rdfsonto.repository.project.ProjectNode;
 import com.rdfsonto.rdfsonto.repository.project.ProjectRepository;
 import com.rdfsonto.rdfsonto.repository.user.UserNode;
+import com.rdfsonto.rdfsonto.service.security.AuthService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class ProjectServiceImpl implements ProjectService
 {
+    private final AuthService authService;
     private final ProjectRepository projectRepository;
 
     @Override

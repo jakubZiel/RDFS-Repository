@@ -1,4 +1,4 @@
-package com.rdfsonto.rdfsonto.config;
+package com.rdfsonto.rdfsonto.config.security;
 
 import org.keycloak.adapters.springsecurity.KeycloakConfiguration;
 import org.keycloak.adapters.springsecurity.authentication.KeycloakAuthenticationProvider;

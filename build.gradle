@@ -51,6 +51,8 @@ dependencies {
     implementation 'org.keycloak:keycloak-spring-boot-starter:19.0.3'
     implementation 'org.keycloak:keycloak-admin-client:19.0.3'
 
+    implementation 'commons-validator:commons-validator:1.7'
+
     runtimeOnly "com.h2database:h2"
 }
 

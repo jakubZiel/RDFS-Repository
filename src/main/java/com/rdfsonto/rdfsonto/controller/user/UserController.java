@@ -51,7 +51,7 @@ public class UserController
     {
         if (userService.findByUsername(user.getUsername()).isPresent())
         {
-            log.info("User name: {} already exist. Can not be created.", user.getUsername());
+            log.info("User name: {} already exist. Can not be created", user.getUsername());
             return ResponseEntity.badRequest().build();
         }
 
@@ -67,7 +67,7 @@ public class UserController
 
         if (original.isEmpty())
         {
-            log.info("User id: {} does not exist, can not be updated.", update.getId());
+            log.info("User id: {} does not exist, can not be updated", update.getId());
 
             return ResponseEntity.notFound().build();
         }

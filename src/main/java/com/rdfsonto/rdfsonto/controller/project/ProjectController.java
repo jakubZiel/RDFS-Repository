@@ -35,7 +35,7 @@ public class ProjectController
 
         if (project.isEmpty())
         {
-            log.info("Project id: {} does not exist.", id);
+            log.info("Project id: {} does not exist", id);
             return ResponseEntity.notFound().build();
         }
 
@@ -89,7 +89,7 @@ public class ProjectController
 
         if (original.isEmpty())
         {
-            log.info("Project id: {} does not exist, can not be updated.", updatedProject.getId());
+            log.info("Project id: {} does not exist, can not be updated", updatedProject.getId());
             return ResponseEntity.notFound().build();
         }
 
