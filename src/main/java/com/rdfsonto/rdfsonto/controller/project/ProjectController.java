@@ -77,7 +77,6 @@ public class ProjectController
             return ResponseEntity.badRequest().build();
         }
 
-
         final var saved = projectService.save(projectName, owner.get());
 
         return ResponseEntity.ok(saved);
