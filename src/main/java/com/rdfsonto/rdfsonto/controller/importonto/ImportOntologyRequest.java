@@ -1,5 +1,8 @@
 package com.rdfsonto.rdfsonto.controller.importonto;
 
-public class ImportOntologyRequest
+import java.net.URL;
+
+
+public record ImportOntologyRequest(String projectName, Long userId, URL source, String rdfFormat)
 {
 }

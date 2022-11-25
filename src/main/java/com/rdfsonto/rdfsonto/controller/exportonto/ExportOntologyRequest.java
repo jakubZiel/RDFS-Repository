@@ -1,5 +1,5 @@
 package com.rdfsonto.rdfsonto.controller.exportonto;
 
-public class ExportOntologyRequest
+public record ExportOntologyRequest(String fileName, String rdfFormat, String projectName, Long userId)
 {
 }

@@ -1,4 +1,4 @@
-package com.rdfsonto.rdfsonto.service.rdf4j.export;
+package com.rdfsonto.rdfsonto.service.rdf4j.exportonto;
 
 import com.rdfsonto.rdfsonto.service.rdf4j.KnownPrefix;
 import com.rdfsonto.rdfsonto.service.rdf4j.RDF4JInputOutput;

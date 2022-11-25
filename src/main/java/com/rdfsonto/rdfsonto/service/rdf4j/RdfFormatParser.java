@@ -3,9 +3,9 @@ package com.rdfsonto.rdfsonto.service.rdf4j;
 import org.eclipse.rdf4j.rio.RDFFormat;
 
 
-public class RdfFormatMapper
+public class RdfFormatParser
 {
-    public static RDFFormat parseRdfFormat(final String rdfFormat)
+    public static RDFFormat parse(final String rdfFormat)
     {
         return switch (rdfFormat)
             {

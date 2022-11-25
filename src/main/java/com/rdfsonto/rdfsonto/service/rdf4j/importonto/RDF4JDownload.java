@@ -1,4 +1,4 @@
-package com.rdfsonto.rdfsonto.service.rdf4j.download;
+package com.rdfsonto.rdfsonto.service.rdf4j.importonto;
 
 import com.rdfsonto.rdfsonto.service.rdf4j.KnownPrefix;
 import com.rdfsonto.rdfsonto.service.rdf4j.RDF4JInputOutput;
@@ -27,11 +27,11 @@ import java.util.HashSet;
 import java.util.Set;
 
 
-public class RDF4JDownloadService extends RDF4JInputOutput
+public class RDF4JDownload extends RDF4JInputOutput
 {
     private String tag;
 
-    public RDF4JDownloadService(RDFFormat dataFormat)
+    public RDF4JDownload(RDFFormat dataFormat)
     {
         super(dataFormat);
     }
@@ -137,7 +137,7 @@ public class RDF4JDownloadService extends RDF4JInputOutput
 
     public static void main(String[] args) throws IOException
     {
-        RDF4JDownloadService d = new RDF4JDownloadService(RDFFormat.TURTLE);
+        RDF4JDownload d = new RDF4JDownload(RDFFormat.TURTLE);
 
         d.prepareRDFFileToMergeIntoNeo4j(
             new URL("file:/home/jzielins/Projects/Ontology-Editor/src/main/resources/rdfs/vw.owl"),
