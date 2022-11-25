@@ -1,4 +1,4 @@
-package com.rdfsonto.rdfsonto.controller;
+package com.rdfsonto.rdfsonto.controller.exportonto;
 
 import org.springframework.web.bind.annotation.RestController;
 
