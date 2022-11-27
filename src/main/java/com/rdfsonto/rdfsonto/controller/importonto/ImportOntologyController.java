@@ -6,9 +6,11 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.rdfsonto.rdfsonto.repository.importonto.ImportOntologyResponse;
+import com.rdfsonto.rdfsonto.repository.importonto.ImportOntologyResult;
 import com.rdfsonto.rdfsonto.service.project.ProjectService;
 import com.rdfsonto.rdfsonto.service.rdf4j.RdfFormatParser;
+import com.rdfsonto.rdfsonto.service.rdf4j.importonto.DownloadedOntology;
+import com.rdfsonto.rdfsonto.service.rdf4j.importonto.ImportOntologyResponse;
 import com.rdfsonto.rdfsonto.service.rdf4j.importonto.ImportOntologyService;
 import com.rdfsonto.rdfsonto.service.user.UserService;
 
@@ -47,7 +49,7 @@ public class ImportOntologyController
             return ResponseEntity.notFound().build();
         }
 
-        final var rdfFormat =  RdfFormatParser.parse(importOntologyRequest.rdfFormat());
+        final var rdfFormat = RdfFormatParser.parse(importOntologyRequest.rdfFormat());
 
         if (rdfFormat == null)
         {
@@ -62,15 +64,25 @@ public class ImportOntologyController
             rdfFormat
         );
 
+        if (notDownloaded(downloadedOntology))
+        {
+            log.error("Failed to load, ontology request: {}", importOntologyRequest);
+            return ResponseEntity.internalServerError().body("failed_ontology_import");
+        }
+
         final var importResult = importOntologyService.loadOntology(downloadedOntology);
 
         if (!isImported(importResult))
         {
-            log.warn("Not successful import: {}", importResult);
+            log.warn("Failed to import ontology request: {}, import response: {}", importOntologyRequest, importResult);
             return ResponseEntity.badRequest().body("ontology_import_error");
         }
 
-        return ResponseEntity.ok().build();
+        return ResponseEntity.ok(
+            ImportOntologyResponse.builder()
+                .withTriplesLoaded(importResult.getTriplesLoaded())
+                .withNamespaces(importResult.getNamespaces())
+                .build());
     }
 
     private boolean validate(final ImportOntologyRequest request)
@@ -81,8 +93,13 @@ public class ImportOntologyController
             request.rdfFormat() != null);
     }
 
-    private boolean isImported(final ImportOntologyResponse importOntologyResponse)
+    private boolean isImported(final ImportOntologyResult importOntologyResult)
     {
-        return true;
+        return importOntologyResult.getTerminationStatus().equals("OK") && importOntologyResult.getTriplesLoaded() > 0;
+    }
+
+    private boolean notDownloaded(final DownloadedOntology downloadedOntology)
+    {
+        return downloadedOntology.ioException() != null;
     }
 }

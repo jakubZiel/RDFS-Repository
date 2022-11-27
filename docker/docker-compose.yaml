@@ -13,6 +13,7 @@ services:
       - ./neo4j/import:/import
       - ./neo4j/logs:/logs
       - ./neo4j/plugins:/plugins
+      - ../workspace:/workspace
 
 # TODO - add automated creation of super user
   postgres:

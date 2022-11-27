@@ -140,8 +140,8 @@ public class RDF4JDownload extends RDF4JInputOutput
         RDF4JDownload d = new RDF4JDownload(RDFFormat.TURTLE);
 
         d.prepareRDFFileToMergeIntoNeo4j(
-            new URL("file:/home/jzielins/Projects/Ontology-Editor/src/main/resources/rdfs/vw.owl"),
-            Paths.get("/home/jzielins/Projects/Ontology-Editor/src/main/resources/rdfs/vw2.owl"),
+            new URL("file:/home/jzielins/Projects/ontology-editor-backend/src/main/resources/rdfs/vw.owl"),
+            Paths.get("/home/jzielins/Projects/ontology-editor-backend/src/main/resources/rdfs/vw2.owl"),
             "projekt_123");
     }
 }

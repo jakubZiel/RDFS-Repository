@@ -4,7 +4,6 @@ import java.io.BufferedInputStream;
 import java.io.File;
 
 import org.eclipse.rdf4j.rio.RDFFormat;
-import org.neo4j.driver.internal.shaded.reactor.util.function.Tuple2;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Component;
 
@@ -28,7 +27,6 @@ class ExportOntologyServiceImpl implements ExportOntologyService
     @Override
     public Pair<File, BufferedInputStream> exportOntology(final Long userId, final String projectName, final RDFFormat rdfFormat)
     {
-
 
         return null;
     }
