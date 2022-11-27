@@ -1,6 +1,6 @@
-package com.rdfsonto.rdfsonto.service.rdf4j.importonto;
+package com.rdfsonto.rdfsonto.service.rdf4j.exportonto;
 
-import com.rdfsonto.rdfsonto.service.rdf4j.RDF4JInputOutput;
+import com.rdfsonto.rdfsonto.service.rdf4j.RDFInputOutput;
 
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Statement;
@@ -10,9 +10,9 @@ import org.eclipse.rdf4j.rio.RDFHandler;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 
 
-class RDF4JStreamDownload extends RDF4JInputOutput implements RDFHandler
+public class RDFStreamExport extends RDFInputOutput implements RDFHandler
 {
-    public RDF4JStreamDownload(RDFFormat dataFormat)
+    public RDFStreamExport(RDFFormat dataFormat)
     {
         super(dataFormat);
     }

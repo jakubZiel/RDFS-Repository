@@ -1,4 +1,4 @@
-package com.rdfsonto.rdfsonto.service.rdf4j.importonto;
+package com.rdfsonto.rdfsonto.controller.importonto;
 
 import java.util.Map;
 

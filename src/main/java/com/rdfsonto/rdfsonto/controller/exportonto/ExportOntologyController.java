@@ -60,13 +60,20 @@ public class ExportOntologyController
             return ResponseEntity.badRequest().body("invalid_rdf_format");
         }
 
-        final var ontologyImportResult = exportOntologyService.exportOntology(
+        final var extractedOntology = exportOntologyService.extractOntology(
             exportOntologyRequest.userId(),
             exportOntologyRequest.projectName(),
-            rdfFormat);
+            rdfFormat
+        );
 
-        final var ontologyFile = ontologyImportResult.getFirst();
-        final var ontologyFileInputStream = ontologyImportResult.getSecond();
+        final var ontologyExportResult = exportOntologyService.exportOntology(
+            exportOntologyRequest.userId(),
+            exportOntologyRequest.projectName(),
+            extractedOntology
+        );
+
+        final var ontologyFile = ontologyExportResult.ontologyFile();
+        final var ontologyFileInputStream = ontologyExportResult.inputStream();
 
         final var fileAttached = attachFileToHttpResponse(response, ontologyFile, ontologyFileInputStream);
 
@@ -75,6 +82,8 @@ public class ExportOntologyController
             log.error("Error attaching a file: {} to http response", ontologyFile.getName());
             return ResponseEntity.internalServerError().body("ontology-export-error");
         }
+
+        exportOntologyService.clearWorkspace(extractedOntology.path());
 
         return ResponseEntity.ok(exportOntologyRequest.fileName());
     }

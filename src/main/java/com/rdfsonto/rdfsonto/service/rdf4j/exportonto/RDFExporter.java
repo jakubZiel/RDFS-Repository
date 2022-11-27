@@ -1,7 +1,7 @@
 package com.rdfsonto.rdfsonto.service.rdf4j.exportonto;
 
 import com.rdfsonto.rdfsonto.service.rdf4j.KnownPrefix;
-import com.rdfsonto.rdfsonto.service.rdf4j.RDF4JInputOutput;
+import com.rdfsonto.rdfsonto.service.rdf4j.RDFInputOutput;
 
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Statement;
@@ -22,11 +22,11 @@ import java.util.HashSet;
 import java.util.Set;
 
 
-public class RDF4JExporter extends RDF4JInputOutput
+public class RDFExporter extends RDFInputOutput
 {
     private String tag;
 
-    public RDF4JExporter(RDFFormat dataFormat)
+    public RDFExporter(RDFFormat dataFormat)
     {
         super(dataFormat);
     }
@@ -149,7 +149,7 @@ public class RDF4JExporter extends RDF4JInputOutput
 
     public static void main(String[] args) throws IOException
     {
-        RDF4JExporter e = new RDF4JExporter(RDFFormat.TURTLE);
+        RDFExporter e = new RDFExporter(RDFFormat.TURTLE);
 
         e.prepareRDFFileForExport(
             Paths.get("/media/jzielins/SD/sem7/PD2/rdfs-onto/src/main/resources/rdfs/movie2-out.owl"),

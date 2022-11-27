@@ -1,13 +1,15 @@
 package com.rdfsonto.rdfsonto.service.rdf4j.exportonto;
 
-import java.io.BufferedInputStream;
-import java.io.File;
+import java.nio.file.Path;
 
 import org.eclipse.rdf4j.rio.RDFFormat;
-import org.springframework.data.util.Pair;
 
 
 public interface ExportOntologyService
 {
-    Pair<File, BufferedInputStream> exportOntology(Long userId, String projectName, RDFFormat rdfFormat);
+    ExportOntologyResult exportOntology(Long userId, String projectName, ExtractedOntology extractedOntology);
+
+    ExtractedOntology extractOntology(Long userId, String projectName, RDFFormat rdfFormat);
+
+    void clearWorkspace(Path filePath);
 }

@@ -29,7 +29,7 @@ class ImportOntologyServiceImpl implements ImportOntologyService
                                                final String projectName,
                                                final RDFFormat rdfFormat)
     {
-        final var rdf4jDownloader = new RDF4JDownload(rdfFormat);
+        final var rdf4jDownloader = new RDFDownloader(rdfFormat);
 
         final var ontologyTag = ontologyTag(userId, projectName);
         final var outputFile = Path.of(WORKSPACE_DIR + ontologyTag);
@@ -52,7 +52,7 @@ class ImportOntologyServiceImpl implements ImportOntologyService
     }
 
     @Override
-    public ImportOntologyResult loadOntology(final DownloadedOntology downloadedOntology)
+    public ImportOntologyResult importOntology(final DownloadedOntology downloadedOntology)
     {
         final var path = downloadedOntology.path().toString();
         final var rdfFormat = downloadedOntology.rdfFormat().getName();

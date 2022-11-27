@@ -11,5 +11,5 @@ public interface ImportOntologyService
 {
     DownloadedOntology downloadOntology(URL source, Long userId, String projectName, RDFFormat rdfFormat);
 
-    ImportOntologyResult loadOntology(DownloadedOntology downloadedOntology);
+    ImportOntologyResult importOntology(DownloadedOntology downloadedOntology);
 }

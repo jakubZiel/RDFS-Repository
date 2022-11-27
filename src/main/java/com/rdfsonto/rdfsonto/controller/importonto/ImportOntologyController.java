@@ -10,7 +10,6 @@ import com.rdfsonto.rdfsonto.repository.importonto.ImportOntologyResult;
 import com.rdfsonto.rdfsonto.service.project.ProjectService;
 import com.rdfsonto.rdfsonto.service.rdf4j.RdfFormatParser;
 import com.rdfsonto.rdfsonto.service.rdf4j.importonto.DownloadedOntology;
-import com.rdfsonto.rdfsonto.service.rdf4j.importonto.ImportOntologyResponse;
 import com.rdfsonto.rdfsonto.service.rdf4j.importonto.ImportOntologyService;
 import com.rdfsonto.rdfsonto.service.user.UserService;
 
@@ -70,7 +69,7 @@ public class ImportOntologyController
             return ResponseEntity.internalServerError().body("failed_ontology_import");
         }
 
-        final var importResult = importOntologyService.loadOntology(downloadedOntology);
+        final var importResult = importOntologyService.importOntology(downloadedOntology);
 
         if (!isImported(importResult))
         {

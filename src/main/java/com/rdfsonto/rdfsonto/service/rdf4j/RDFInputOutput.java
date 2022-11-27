@@ -15,7 +15,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 
-public abstract class RDF4JInputOutput
+public abstract class RDFInputOutput
 {
     protected final String USER_NAMESPACE = "https://www.user_neo4j.com#";
     protected final String USER_NAMESPACE_PREFIX = "un";
@@ -25,7 +25,7 @@ public abstract class RDF4JInputOutput
     protected final Set<String> knownNamespaces;
     protected final RDFFormat dataFormat;
 
-    public RDF4JInputOutput(RDFFormat dataFormat)
+    public RDFInputOutput(RDFFormat dataFormat)
     {
         this.dataFormat = dataFormat;
         this.knownNamespaces = new HashSet<>();
