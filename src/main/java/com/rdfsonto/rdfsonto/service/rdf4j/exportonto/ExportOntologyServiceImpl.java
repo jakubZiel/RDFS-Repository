@@ -22,7 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 class ExportOntologyServiceImpl implements ExportOntologyService
 {
-    private static final long MAX_NODES_CHUNK = 20_000;
+    private static final long MAX_NODES_CHUNK = 1000;
 
     @Value("${rdf4j.downloader.workspace}")
     private String WORKSPACE_DIR;
