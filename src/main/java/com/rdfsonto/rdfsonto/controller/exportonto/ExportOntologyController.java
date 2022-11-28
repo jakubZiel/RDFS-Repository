@@ -32,7 +32,7 @@ public class ExportOntologyController
     private final UserService userService;
 
     @PostMapping
-    public ResponseEntity<?> exportPdfResource(final ExportOntologyRequest exportOntologyRequest, final HttpServletResponse response)
+    public ResponseEntity<?> exportRDFResource(final ExportOntologyRequest exportOntologyRequest, final HttpServletResponse response)
     {
         if (validate(exportOntologyRequest))
         {
