@@ -29,14 +29,14 @@ class ImportOntologyServiceImpl implements ImportOntologyService
                                                final String projectName,
                                                final RDFFormat rdfFormat)
     {
-        final var rdf4jDownloader = new RDFDownloader(rdfFormat);
+        final var rdf4jDownloader = new RDFImporter();
 
         final var ontologyTag = ontologyTag(userId, projectName);
         final var outputFile = Path.of(WORKSPACE_DIR + ontologyTag);
 
         try
         {
-            rdf4jDownloader.prepareRDFFileToMergeIntoNeo4j(source, outputFile, ontologyTag);
+            rdf4jDownloader.prepareRDFFileToMergeIntoNeo4j(source, outputFile, ontologyTag, rdfFormat);
 
             return DownloadedOntology.builder()
                 .withPath(outputFile)

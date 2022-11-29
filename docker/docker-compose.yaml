@@ -40,3 +40,5 @@ services:
     ports:
       - "8888:8080"
     restart: unless-stopped
+# TODO - add redis
+

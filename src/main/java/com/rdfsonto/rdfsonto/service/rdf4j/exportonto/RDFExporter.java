@@ -24,26 +24,18 @@ import java.util.Set;
 
 public class RDFExporter extends RDFInputOutput
 {
-    private String tag;
-
-    public RDFExporter(RDFFormat dataFormat)
-    {
-        super(dataFormat);
-    }
-
-    public void prepareRDFFileForExport(Path inputFile, String tag) throws IOException
+    public void prepareRDFFileForExport(final Path inputFile, final String tag, final RDFFormat rdfFormat) throws IOException
     {
         outModel = new ModelBuilder().build();
-        this.tag = tag;
-        loadModel(inputFile);
+        loadModel(inputFile, rdfFormat);
 
         saveExportReadyModel(
-            Paths.get(generateFileName(
-                inputFile.toAbsolutePath().toString(),
-                "-exp")));
+            Paths.get(generateFileName(inputFile.toAbsolutePath().toString(), "-exp")),
+            rdfFormat,
+            tag);
     }
 
-    private void saveExportReadyModel(Path outputFile) throws FileNotFoundException
+    private void saveExportReadyModel(final Path outputFile, final RDFFormat rdfFormat, final String tag) throws FileNotFoundException
     {
         model.getNamespaces().forEach(namespace -> {
             if (KnownPrefix.isKnownPrefix(namespace.getPrefix()))
@@ -61,7 +53,7 @@ public class RDFExporter extends RDFInputOutput
         });
 
         model.forEach(statement -> {
-            final var untaggedStatement = untagStatement(statement);
+            final var untaggedStatement = untagStatement(statement, tag);
             if (untaggedStatement == null)
             {
                 return;
@@ -73,7 +65,7 @@ public class RDFExporter extends RDFInputOutput
         outModel.removeNamespace(USER_NAMESPACE_PREFIX);
 
         final var output = new FileOutputStream(outputFile.toString());
-        Rio.write(outModel, output, dataFormat);
+        Rio.write(outModel, output, rdfFormat);
     }
 
     private void removeUserLabel()
@@ -87,7 +79,7 @@ public class RDFExporter extends RDFInputOutput
         removeStatements.forEach(statement -> outModel.remove(statement));
     }
 
-    private Statement untagStatement(Statement inputStatement)
+    private Statement untagStatement(final Statement inputStatement, final String tag)
     {
         if (!(validate(inputStatement.getSubject()) && validate(inputStatement.getObject())))
         {
@@ -98,15 +90,15 @@ public class RDFExporter extends RDFInputOutput
         final var predicate = inputStatement.getPredicate();
         final var object = inputStatement.getObject();
 
-        final var sub = handleSubject(subject);
-        final var pred = handlePredicate(predicate);
-        final var obj = handleObject(object);
+        final var sub = handleSubject(subject, tag);
+        final var pred = handlePredicate(predicate, tag);
+        final var obj = handleObject(object, tag);
 
         return Statements.statement(sub, pred, obj, null);
     }
 
     @Override
-    protected IRI handleSubject(IRI subject)
+    protected IRI handleSubject(final IRI subject, final String tag)
     {
         if (!knownNamespaces.contains(subject.getNamespace()))
         {
@@ -118,7 +110,7 @@ public class RDFExporter extends RDFInputOutput
     }
 
     @Override
-    protected IRI handlePredicate(IRI predicate)
+    protected IRI handlePredicate(final IRI predicate, final String tag)
     {
         if (!knownNamespaces.contains(predicate.getNamespace()))
         {
@@ -130,7 +122,7 @@ public class RDFExporter extends RDFInputOutput
     }
 
     @Override
-    protected Value handleObject(Value object)
+    protected Value handleObject(final Value object, final String tag)
     {
         if (object.isLiteral())
         {
@@ -149,11 +141,12 @@ public class RDFExporter extends RDFInputOutput
 
     public static void main(String[] args) throws IOException
     {
-        RDFExporter e = new RDFExporter(RDFFormat.TURTLE);
+        RDFExporter e = new RDFExporter();
 
         e.prepareRDFFileForExport(
             Paths.get("/media/jzielins/SD/sem7/PD2/rdfs-onto/src/main/resources/rdfs/movie2-out.owl"),
-            "projekt_123"
+            "projekt_123",
+            RDFFormat.TURTLE
         );
     }
 }

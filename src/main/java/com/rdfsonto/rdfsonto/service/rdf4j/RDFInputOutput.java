@@ -23,29 +23,27 @@ public abstract class RDFInputOutput
     protected Model model;
     protected Model outModel;
     protected final Set<String> knownNamespaces;
-    protected final RDFFormat dataFormat;
 
-    public RDFInputOutput(RDFFormat dataFormat)
+    public RDFInputOutput()
     {
-        this.dataFormat = dataFormat;
         this.knownNamespaces = new HashSet<>();
     }
 
-    protected abstract IRI handlePredicate(IRI predicate);
+    protected abstract IRI handlePredicate(IRI predicate, String tag);
 
-    protected abstract IRI handleSubject(IRI subject);
+    protected abstract IRI handleSubject(IRI subject, String tag);
 
-    protected abstract Value handleObject(Value object);
+    protected abstract Value handleObject(Value object, String tag);
 
     protected BNode handleBNode(BNode bnode)
     {
         return null;
     }
 
-    protected void loadModel(Path outputFile) throws IOException
+    protected void loadModel(final Path outputFile, final RDFFormat rdfFormat) throws IOException
     {
         final var input = new FileInputStream(outputFile.toString());
-        model = Rio.parse(input, "", dataFormat);
+        model = Rio.parse(input, "", rdfFormat);
     }
 
     protected boolean validate(Value object)

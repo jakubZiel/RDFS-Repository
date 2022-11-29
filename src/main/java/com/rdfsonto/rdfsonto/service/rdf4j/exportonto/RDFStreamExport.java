@@ -1,36 +1,30 @@
 package com.rdfsonto.rdfsonto.service.rdf4j.exportonto;
 
-import com.rdfsonto.rdfsonto.service.rdf4j.RDFInputOutput;
-
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Value;
-import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.RDFHandler;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
+
+import com.rdfsonto.rdfsonto.service.rdf4j.RDFInputOutput;
 
 
 public class RDFStreamExport extends RDFInputOutput implements RDFHandler
 {
-    public RDFStreamExport(RDFFormat dataFormat)
-    {
-        super(dataFormat);
-    }
-
     @Override
-    protected IRI handlePredicate(IRI predicate)
+    protected IRI handlePredicate(final IRI predicate, final String tag)
     {
         return null;
     }
 
     @Override
-    protected IRI handleSubject(IRI subject)
+    protected IRI handleSubject(final IRI subject, final String tag)
     {
         return null;
     }
 
     @Override
-    protected Value handleObject(Value object)
+    protected Value handleObject(final Value object, final String tag)
     {
         return null;
     }
@@ -48,19 +42,19 @@ public class RDFStreamExport extends RDFInputOutput implements RDFHandler
     }
 
     @Override
-    public void handleNamespace(String prefix, String uri) throws RDFHandlerException
+    public void handleNamespace(final String prefix, final String uri) throws RDFHandlerException
     {
 
     }
 
     @Override
-    public void handleStatement(Statement st) throws RDFHandlerException
+    public void handleStatement(final Statement st) throws RDFHandlerException
     {
 
     }
 
     @Override
-    public void handleComment(String comment) throws RDFHandlerException
+    public void handleComment(final String comment) throws RDFHandlerException
     {
 
     }

@@ -60,11 +60,11 @@ class ExportOntologyServiceImpl implements ExportOntologyService
     public ExportOntologyResult exportOntology(final Long userId, final String projectName, final ExtractedOntology extractedOntology)
     {
         final var ontologyTag = ontologyTag(userId, projectName);
-        final var rdfExporter = new RDFExporter(extractedOntology.rdfFormat());
+        final var rdfExporter = new RDFExporter();
 
         try
         {
-            rdfExporter.prepareRDFFileForExport(extractedOntology.path(), ontologyTag);
+            rdfExporter.prepareRDFFileForExport(extractedOntology.path(), ontologyTag, extractedOntology.rdfFormat());
 
             final var inputStream = new BufferedInputStream(new FileInputStream(extractedOntology.path().toFile()));
             final var file = extractedOntology.path().toFile();
