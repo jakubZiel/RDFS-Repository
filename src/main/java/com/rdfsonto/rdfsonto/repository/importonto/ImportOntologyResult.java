@@ -9,7 +9,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
 
-@Node
+@Node("ImportOntologyResult")
 @Getter
 @RequiredArgsConstructor
 public class ImportOntologyResult
@@ -19,6 +19,5 @@ public class ImportOntologyResult
     private final String terminationStatus;
     private final Long triplesLoaded;
     private final Long triplesParsed;
-    private final Map<String, String> namespaces;
     private final String extraInfo;
 }

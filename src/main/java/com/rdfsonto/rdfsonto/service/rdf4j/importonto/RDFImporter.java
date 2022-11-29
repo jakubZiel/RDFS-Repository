@@ -5,7 +5,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.URL;
 import java.nio.channels.Channels;
-import java.nio.channels.ReadableByteChannel;
 import java.nio.file.FileSystemException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -32,7 +31,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class RDFImporter extends RDFInputOutput
 {
-    public void prepareRDFFileToMergeIntoNeo4j(URL inputURL, Path outputFile, String tag, RDFFormat rdfFormat) throws IOException
+    public void prepareRDFFileToMergeIntoNeo4j(final URL inputURL, final Path outputFile, final String tag, final RDFFormat rdfFormat)
+        throws IOException
     {
         outModel = new ModelBuilder().build();
         downloadFile(inputURL, outputFile);
@@ -40,10 +40,10 @@ public class RDFImporter extends RDFInputOutput
         saveMergeReadyModel(outputFile, rdfFormat, tag);
     }
 
-    private void downloadFile(URL inputURL, Path outputFile) throws IOException
+    private void downloadFile(final URL inputURL, final Path outputFile) throws IOException
     {
-        ReadableByteChannel readableByteChannel = Channels.newChannel(inputURL.openStream());
-        FileOutputStream fileOutputStream = new FileOutputStream(outputFile.toString());
+        final var readableByteChannel = Channels.newChannel(inputURL.openStream());
+        final var fileOutputStream = new FileOutputStream(outputFile.toString());
         fileOutputStream.getChannel().transferFrom(readableByteChannel, 0, Long.MAX_VALUE);
         fileOutputStream.close();
     }

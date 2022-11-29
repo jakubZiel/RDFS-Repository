@@ -30,19 +30,20 @@ public class ImportOntologyController
     @PostMapping
     public ResponseEntity<?> importOntology(@RequestBody final ImportOntologyRequest importOntologyRequest)
     {
-        if (validate(importOntologyRequest))
+        if (isNotValid(importOntologyRequest))
         {
             log.warn("Invalid import ontology request: {}", importOntologyRequest);
             return ResponseEntity.badRequest().body("invalid_request");
         }
 
-        if (projectService.findProjectByNameAndUserId(importOntologyRequest.projectName(), importOntologyRequest.userId()).isPresent())
+        if (projectAlreadyExists(importOntologyRequest))
         {
             log.warn("Invalid imported ontology name: {}, ontology already exists", importOntologyRequest.projectName());
             return ResponseEntity.badRequest().body("invalid_project_name");
         }
 
-        if (userService.findById(importOntologyRequest.userId()).isEmpty())
+        final var user = userService.findById(importOntologyRequest.userId());
+        if (user.isEmpty())
         {
             log.warn("Attempted ontology import for non-existing user id: {}", importOntologyRequest.userId());
             return ResponseEntity.notFound().build();
@@ -56,48 +57,51 @@ public class ImportOntologyController
             return ResponseEntity.badRequest().body("invalid_rdf_format");
         }
 
+        final var project = projectService.save(importOntologyRequest.projectName(), user.get());
+
         final var downloadedOntology = importOntologyService.downloadOntology(
             importOntologyRequest.source(),
             importOntologyRequest.userId(),
-            importOntologyRequest.projectName(),
+            project.getId(),
             rdfFormat
         );
 
-        if (notDownloaded(downloadedOntology))
+        if (isNotDownloaded(downloadedOntology))
         {
-            log.error("Failed to load, ontology request: {}", importOntologyRequest);
+            log.error("Failed to load, ontology request: {}, stacktrace: {}", importOntologyRequest, downloadedOntology.ioException());
             return ResponseEntity.internalServerError().body("failed_ontology_import");
         }
 
         final var importResult = importOntologyService.importOntology(downloadedOntology);
 
-        if (!isImported(importResult))
+        if (isNotImported(importResult))
         {
             log.warn("Failed to import ontology request: {}, import response: {}", importOntologyRequest, importResult);
             return ResponseEntity.badRequest().body("ontology_import_error");
         }
 
-        return ResponseEntity.ok(
-            ImportOntologyResponse.builder()
-                .withTriplesLoaded(importResult.getTriplesLoaded())
-                .withNamespaces(importResult.getNamespaces())
-                .build());
+        return ResponseEntity.ok().build();
     }
 
-    private boolean validate(final ImportOntologyRequest request)
+    private boolean isNotValid(final ImportOntologyRequest request)
     {
-        return (request.projectName() != null &&
-            request.userId() != null &&
-            request.source() != null &&
-            request.rdfFormat() != null);
+        return request.projectName() == null ||
+            request.userId() == null ||
+            request.source() == null ||
+            request.rdfFormat() == null;
     }
 
-    private boolean isImported(final ImportOntologyResult importOntologyResult)
+    private boolean isNotImported(final ImportOntologyResult importOntologyResult)
     {
-        return importOntologyResult.getTerminationStatus().equals("OK") && importOntologyResult.getTriplesLoaded() > 0;
+        return !importOntologyResult.getTerminationStatus().equals("OK") || importOntologyResult.getTriplesLoaded() <= 0;
     }
 
-    private boolean notDownloaded(final DownloadedOntology downloadedOntology)
+    private boolean projectAlreadyExists(final ImportOntologyRequest importOntologyRequest)
+    {
+        return projectService.findProjectByNameAndUserId(importOntologyRequest.projectName(), importOntologyRequest.userId()).isPresent();
+    }
+
+    private boolean isNotDownloaded(final DownloadedOntology downloadedOntology)
     {
         return downloadedOntology.ioException() != null;
     }

@@ -19,20 +19,20 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 class ImportOntologyServiceImpl implements ImportOntologyService
 {
-    private static final String WORKSPACE_DIR = "./workspace/";
+    private static final String WORKSPACE_DIR = System.getProperty("user.dir") + "/workspace/";
 
     private final ImportOntologyRepository importOntologyRepository;
 
     @Override
     public DownloadedOntology downloadOntology(final URL source,
                                                final Long userId,
-                                               final String projectName,
+                                               final Long projectId,
                                                final RDFFormat rdfFormat)
     {
         final var rdf4jDownloader = new RDFImporter();
 
-        final var ontologyTag = ontologyTag(userId, projectName);
-        final var outputFile = Path.of(WORKSPACE_DIR + ontologyTag);
+        final var ontologyTag = ontologyTag(userId, projectId);
+        final var outputFile = Path.of(WORKSPACE_DIR + ontologyTag + ".input");
 
         try
         {
@@ -54,14 +54,18 @@ class ImportOntologyServiceImpl implements ImportOntologyService
     @Override
     public ImportOntologyResult importOntology(final DownloadedOntology downloadedOntology)
     {
-        final var path = downloadedOntology.path().toString();
+        final var path = "file://" + getRemoteWorkspaceDir(downloadedOntology.path().toString());
         final var rdfFormat = downloadedOntology.rdfFormat().getName();
 
         return importOntologyRepository.importOntology(path, rdfFormat);
     }
 
-    private String ontologyTag(final Long userId, final String projectName)
+    private String getRemoteWorkspaceDir(final String localWorkspaceDir) {
+        return localWorkspaceDir.substring(localWorkspaceDir.indexOf("/workspace"));
+    }
+
+    private String ontologyTag(final Long userId, final Long projectId)
     {
-        return userId.toString() + projectName;
+        return userId.toString() + "_" + projectId.toString();
     }
 }
