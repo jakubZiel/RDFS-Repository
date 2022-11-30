@@ -34,15 +34,16 @@ public class ExportOntologyController
     @PostMapping
     public ResponseEntity<?> exportRDFResource(final ExportOntologyRequest exportOntologyRequest, final HttpServletResponse response)
     {
-        if (validate(exportOntologyRequest))
+        if (isInvalid(exportOntologyRequest))
         {
             log.warn("Invalid export ontology request: {}", exportOntologyRequest);
             return ResponseEntity.badRequest().body("invalid_request");
         }
 
-        if (projectService.findProjectByNameAndUserId(exportOntologyRequest.projectName(), exportOntologyRequest.userId()).isPresent())
+        final var project = projectService.findProjectByNameAndUserId(exportOntologyRequest.projectName(), exportOntologyRequest.userId());
+        if (project.isEmpty())
         {
-            log.warn("Invalid export ontology name: {}, ontology already exists", exportOntologyRequest.projectName());
+            log.warn("Invalid export ontology name: {}, ontology does not exist", exportOntologyRequest.projectName());
             return ResponseEntity.badRequest().body("invalid_project_name");
         }
 
@@ -62,13 +63,13 @@ public class ExportOntologyController
 
         final var extractedOntology = exportOntologyService.extractOntology(
             exportOntologyRequest.userId(),
-            exportOntologyRequest.projectName(),
+            project.get().getId(),
             rdfFormat
         );
 
         final var ontologyExportResult = exportOntologyService.exportOntology(
             exportOntologyRequest.userId(),
-            exportOntologyRequest.projectName(),
+            project.get().getId(),
             extractedOntology
         );
 
@@ -105,11 +106,11 @@ public class ExportOntologyController
         }
     }
 
-    private boolean validate(final ExportOntologyRequest request)
+    private boolean isInvalid(final ExportOntologyRequest request)
     {
-        return (request.projectName() != null &&
-            request.userId() != null &&
-            request.fileName() != null &&
-            request.rdfFormat() != null);
+        return (request.projectName() == null ||
+            request.userId() == null ||
+            request.fileName() == null ||
+            request.rdfFormat() == null);
     }
 }

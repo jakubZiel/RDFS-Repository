@@ -49,7 +49,7 @@ public class RDFImporter extends RDFInputOutput
     }
 
     private void saveMergeReadyModel(final Path outputFile, final RDFFormat rdfFormat, final String tag)
-        throws FileNotFoundException, FileSystemException
+        throws FileNotFoundException
     {
 
         model.setNamespace(USER_NAMESPACE_PREFIX, USER_NAMESPACE);
@@ -80,7 +80,7 @@ public class RDFImporter extends RDFInputOutput
         );
 
         applyUserLabel(tag);
-        final var name = generateFileName(outputFile.toString(), "-out");
+        final var name = outputFile.toString();
         final var output = new FileOutputStream(name);
         Rio.write(outModel, output, rdfFormat);
     }

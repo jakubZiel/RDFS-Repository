@@ -24,6 +24,5 @@ public interface ClassNodeRepository extends Neo4jRepository<ClassNode, Long> {
     //@Query("")
     //List<List<Object>> getAllNodesValues();
 
-    @Query("bruh")
     Long countAllByClassLabelsContaining(String projectTag);
 }

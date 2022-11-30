@@ -23,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 class ExportOntologyServiceImpl implements ExportOntologyService
 {
     private static final long MAX_NODES_CHUNK = 1000;
+    private static final String PROJECT_LABEL_ROOT = "https://www.user_neo4j.com#";
 
     @Value("${rdf4j.downloader.workspace}")
     private String WORKSPACE_DIR;
@@ -30,17 +31,18 @@ class ExportOntologyServiceImpl implements ExportOntologyService
     private final Neo4jRDFClient neo4jRDFClient;
 
     @Override
-    public ExtractedOntology extractOntology(final Long userId, final String projectName, final RDFFormat rdfFormat)
+    public ExtractedOntology extractOntology(final Long userId, final Long projectId, final RDFFormat rdfFormat)
     {
-        final var ontologyTag = ontologyTag(userId, projectName);
-        final var projectNodesCount = classNodeRepository.countAllByClassLabelsContaining(ontologyTag);
+        final var ontologyTag = ontologyTag(userId, projectId);
+        final var projectLabel = PROJECT_LABEL_ROOT + ontologyTag;
+        final var projectNodesCount = classNodeRepository.countAllByClassLabelsContaining(projectLabel);
 
         final var extractedOntologyBuilder = ExtractedOntology.builder()
             .withRdfFormat(rdfFormat);
 
         if (projectNodesCount <= MAX_NODES_CHUNK)
         {
-            final var serializedRDFGraph = neo4jRDFClient.serializeNeo4jGraphToRDF(ontologyTag, rdfFormat);
+            final var serializedRDFGraph = neo4jRDFClient.serializeNeo4jGraphToRDF(projectLabel, rdfFormat);
             final var savedFile = saveToFile(serializedRDFGraph, ontologyTag);
 
             extractedOntologyBuilder.withPath(savedFile);
@@ -57,9 +59,9 @@ class ExportOntologyServiceImpl implements ExportOntologyService
     }
 
     @Override
-    public ExportOntologyResult exportOntology(final Long userId, final String projectName, final ExtractedOntology extractedOntology)
+    public ExportOntologyResult exportOntology(final Long userId, final Long projectId, final ExtractedOntology extractedOntology)
     {
-        final var ontologyTag = ontologyTag(userId, projectName);
+        final var ontologyTag = ontologyTag(userId, projectId);
         final var rdfExporter = new RDFExporter();
 
         try
@@ -114,8 +116,8 @@ class ExportOntologyServiceImpl implements ExportOntologyService
         }
     }
 
-    private String ontologyTag(final Long userId, final String projectName)
+    private String ontologyTag(final Long userId, final Long projectId)
     {
-        return userId.toString() + projectName;
+        return userId.toString() + projectId.toString();
     }
 }
