@@ -23,7 +23,7 @@ public class Neo4jRDFClient
     private static final String GET_ALL_NODES_OF_PROJECT_URL = "/rdf/neo4j/cypher";
     private static final String GET_ALL_NODES_OF_PROJECT_REQUEST_BODY_TEMPLATE = """
         {
-            "cypher" : "MATCH (n:%s) RETURN n"
+            "cypher" : "MATCH pattern = (n:%s)-[]-() RETURN pattern"
             "format" : "%s"
         }
          """;
@@ -34,7 +34,7 @@ public class Neo4jRDFClient
 
     public String serializeNeo4jGraphToRDF(final String projectTag, final RDFFormat rdfFormat)
     {
-        final var httpEntity = prepareHttpEntityGetAllProjectsNode(projectTag, rdfFormat);
+        final var httpEntity = prepareHttpEntityGetAllNodesInProject(projectTag, rdfFormat);
 
         return restTemplate.exchange(
             neo4jHost + GET_ALL_NODES_OF_PROJECT_URL,
@@ -48,7 +48,7 @@ public class Neo4jRDFClient
         return null;
     }
 
-    private HttpEntity<?> prepareHttpEntityGetAllProjectsNode(final String projectTag, final RDFFormat rdfFormat)
+    private HttpEntity<?> prepareHttpEntityGetAllNodesInProject(final String projectTag, final RDFFormat rdfFormat)
     {
         final var headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
