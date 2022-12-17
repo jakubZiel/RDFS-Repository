@@ -6,7 +6,12 @@ import java.util.Optional;
 
 public interface ClassNodeService
 {
-    List<ClassNode> getClassNodesByIds(List<Long> ids);
+    List<ClassNode> findByIds(List<Long> ids);
 
-    Optional<ClassNode> getClassNodeById(Long id);
+    Optional<ClassNode> findById(Long id);
+
+    Optional<ClassNode> save(ClassNode node);
+    ClassNode update(ClassNode node);
+
+    boolean deleteById(long id);
 }

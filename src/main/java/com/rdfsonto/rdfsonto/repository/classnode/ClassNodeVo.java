@@ -1,5 +1,7 @@
 package com.rdfsonto.rdfsonto.repository.classnode;
 
+import static org.springframework.data.neo4j.core.schema.Relationship.Direction.INCOMING;
+
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -8,24 +10,30 @@ import org.springframework.data.neo4j.core.schema.DynamicLabels;
 import org.springframework.data.neo4j.core.schema.GeneratedValue;
 import org.springframework.data.neo4j.core.schema.Id;
 import org.springframework.data.neo4j.core.schema.Node;
+import org.springframework.data.neo4j.core.schema.Relationship;
 
 import lombok.Builder;
 import lombok.Getter;
+import lombok.Setter;
 
 
 @Node("Resource")
 @Getter
+@Setter
 @Builder(setterPrefix = "with")
 public class ClassNodeVo
 {
     @Id
     @GeneratedValue
-    private long id;
+    private Long id;
 
     @DynamicLabels
     private List<String> classLabels;
 
     private Map<String, String> properties;
+
+    @Relationship(direction = INCOMING)
+    private Map<String, List<ClassNodeVo>> neighbours;
 
     private String relation;
     private String uri;
