@@ -1,37 +1,35 @@
 package com.rdfsonto.rdfsonto.repository.classnode;
 
-import lombok.Getter;
-
-import org.springframework.data.neo4j.core.schema.*;
-
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.springframework.data.neo4j.core.schema.DynamicLabels;
+import org.springframework.data.neo4j.core.schema.GeneratedValue;
+import org.springframework.data.neo4j.core.schema.Id;
+import org.springframework.data.neo4j.core.schema.Node;
+
+import lombok.Builder;
+import lombok.Getter;
+
 
 @Node("Resource")
 @Getter
-public class ClassNode
+@Builder(setterPrefix = "with")
+public class ClassNodeVo
 {
     @Id
     @GeneratedValue
-    long id;
+    private long id;
 
     @DynamicLabels
-    List<String> classLabels;
+    private List<String> classLabels;
 
-    @Relationship
-    Map<String, ClassNode> neighbours;
+    private Map<String, String> properties;
 
-    Map<String, String> properties;
-
-    String uri;
-
-    public ClassNode(List<String> classLabels, Map<String, ClassNode> neighbours)
-    {
-        this.neighbours = neighbours;
-        this.classLabels = classLabels;
-    }
+    private String relation;
+    private String uri;
+    private Long source;
 
     public void setProperties(List<String> props)
     {

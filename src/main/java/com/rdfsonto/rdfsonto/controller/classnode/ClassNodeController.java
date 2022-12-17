@@ -1,17 +1,20 @@
 package com.rdfsonto.rdfsonto.controller.classnode;
 
 import java.util.Collection;
-import java.util.Optional;
+import java.util.List;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.rdfsonto.rdfsonto.repository.classnode.ClassNode;
 import com.rdfsonto.rdfsonto.repository.classnode.ClassNodeRepository;
+import com.rdfsonto.rdfsonto.repository.classnode.ClassNodeVo;
+import com.rdfsonto.rdfsonto.service.classnode.ClassNodeService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,18 +24,36 @@ import lombok.extern.slf4j.Slf4j;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/neo4j/class")
-public class ClassController
+public class ClassNodeController
 {
     private final ClassNodeRepository repository;
+    private final ClassNodeService classNodeService;
 
     @GetMapping("/{id}")
-    Optional<ClassNode> getClassNodeById(@PathVariable long id)
+    ResponseEntity<?> getClassNodeById(@PathVariable final long id)
     {
-        final var node = repository.findById(id);
-        final var props = repository.getAllNodeProperties(id);
+        final var node = classNodeService.getClassNodeById(id);
 
-        node.ifPresent(nodeVal -> nodeVal.setProperties(props));
-        return node;
+        if (node.isEmpty())
+        {
+            log.info("Node id: {} does not exist", id);
+            return ResponseEntity.notFound().build();
+        }
+
+        return ResponseEntity.ok(node.get());
+    }
+
+    @PostMapping("/ids")
+    ResponseEntity<?> getClassNodesById(@RequestBody final List<Long> nodeIds)
+    {
+        if (nodeIds.isEmpty())
+        {
+            return ResponseEntity.badRequest().body("invalid_body_empty_ids");
+        }
+
+        final var nodes = classNodeService.getClassNodesByIds(nodeIds);
+
+        return ResponseEntity.ok(nodes);
     }
 
     @GetMapping("/count")
@@ -42,13 +63,13 @@ public class ClassController
     }
 
     @GetMapping("/all")
-    Collection<ClassNode> getAllClassNodes()
+    Collection<ClassNodeVo> getAllClassNodes()
     {
         return repository.findAll();
     }
 
     @GetMapping("/all/{user}/{project}")
-    Collection<ClassNode> getAllClassNodesInProject(@PathVariable String user, @PathVariable String project)
+    Collection<ClassNodeVo> getAllClassNodesInProject(@PathVariable String user, @PathVariable String project)
     {
         return null;
     }
