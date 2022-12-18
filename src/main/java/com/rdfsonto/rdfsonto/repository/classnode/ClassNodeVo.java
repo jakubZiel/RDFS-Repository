@@ -18,9 +18,9 @@ import lombok.Getter;
 import lombok.Setter;
 
 
-@Node("Resource")
 @Getter
 @Setter
+@Node("Resource")
 @Builder(setterPrefix = "with")
 public class ClassNodeVo
 {

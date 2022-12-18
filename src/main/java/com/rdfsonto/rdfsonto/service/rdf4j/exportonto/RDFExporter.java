@@ -1,7 +1,12 @@
 package com.rdfsonto.rdfsonto.service.rdf4j.exportonto;
 
-import com.rdfsonto.rdfsonto.service.rdf4j.KnownPrefix;
-import com.rdfsonto.rdfsonto.service.rdf4j.RDFInputOutput;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.HashSet;
+import java.util.Set;
 
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Statement;
@@ -13,13 +18,8 @@ import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.Rio;
 
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.HashSet;
-import java.util.Set;
+import com.rdfsonto.rdfsonto.service.rdf4j.KnownPrefix;
+import com.rdfsonto.rdfsonto.service.rdf4j.RDFInputOutput;
 
 
 public class RDFExporter extends RDFInputOutput

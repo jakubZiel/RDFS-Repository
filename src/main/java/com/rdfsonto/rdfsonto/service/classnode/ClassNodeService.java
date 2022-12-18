@@ -11,6 +11,7 @@ public interface ClassNodeService
     Optional<ClassNode> findById(Long id);
 
     Optional<ClassNode> save(ClassNode node);
+
     Optional<ClassNode> update(ClassNode node);
 
     boolean deleteById(long id);

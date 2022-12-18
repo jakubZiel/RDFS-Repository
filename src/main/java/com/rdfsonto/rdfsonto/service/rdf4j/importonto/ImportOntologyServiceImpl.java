@@ -60,7 +60,8 @@ class ImportOntologyServiceImpl implements ImportOntologyService
         return importOntologyRepository.importOntology(path, rdfFormat);
     }
 
-    private String getRemoteWorkspaceDir(final String localWorkspaceDir) {
+    private String getRemoteWorkspaceDir(final String localWorkspaceDir)
+    {
         return localWorkspaceDir.substring(localWorkspaceDir.indexOf("/workspace"));
     }
 

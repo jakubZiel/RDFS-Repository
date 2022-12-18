@@ -1,9 +1,9 @@
 package com.rdfsonto.rdfsonto.service.rdf4j;
 
+import java.util.Arrays;
+
 import lombok.AllArgsConstructor;
 import lombok.Getter;
-
-import java.util.Arrays;
 
 
 @AllArgsConstructor
