@@ -1,7 +1,6 @@
 package com.rdfsonto.rdfsonto.controller.classnode;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -153,12 +152,5 @@ public class ClassNodeController
     ResponseEntity<List<?>> getAllClassNodesInProject(@PathVariable String user, @PathVariable String project)
     {
         return null;
-    }
-
-    @PutMapping("/set_property/{id}/{propertyName}/{propertyValue}")
-    ResponseEntity<?> setProperty(@PathVariable long id, @PathVariable String propertyName, @PathVariable String propertyValue)
-    {
-
-        return ResponseEntity.ok().build();
     }
 }

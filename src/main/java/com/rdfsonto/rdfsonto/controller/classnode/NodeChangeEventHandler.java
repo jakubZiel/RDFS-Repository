@@ -68,16 +68,13 @@ public class NodeChangeEventHandler
 
     private NodeChangeEventResponse handleUpdate(final NodeChangeEvent updateEvent)
     {
-        final var updatedNode = updateEvent.body();
+        final var updatedNode = classNodeService.update(updateEvent.body());
 
         final var responseBuilder = NodeChangeEventResponse.builder()
             .withEvent(updateEvent)
-            .withFailed(updatedNode == null);
+            .withFailed(updatedNode.isEmpty());
 
-        if (updatedNode != null)
-        {
-            responseBuilder.withBody(updatedNode);
-        }
+        updatedNode.ifPresent(responseBuilder::withBody);
 
         return responseBuilder.build();
     }
