@@ -31,7 +31,9 @@ public interface ClassNodeRepository extends Neo4jRepository<ClassNodeVo, Long>
     List<ClassNodeVo> findAllIncomingNeighbours(@Param("nodeIds") List<Long> ids);
 
     @Query("""
-        MATCH (n:Resource) WHERE id(n) = $nodeId UNWIND keys(n) AS prop RETURN prop
+        MATCH (n:Resource) WHERE id(n) = $nodeId 
+        UNWIND keys(n) AS prop 
+        RETURN prop
         """)
     List<String> getAllNodeProperties(@Param("nodeId") long id);
 
