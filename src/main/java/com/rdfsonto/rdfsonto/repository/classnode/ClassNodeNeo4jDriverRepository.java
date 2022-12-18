@@ -2,12 +2,9 @@ package com.rdfsonto.rdfsonto.repository.classnode;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 import org.neo4j.driver.Driver;
 import org.springframework.stereotype.Component;
-
-import com.rdfsonto.rdfsonto.service.classnode.ClassNode;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

@@ -95,7 +95,7 @@ public class ClassNodeController
 
         final var updatedNode = classNodeService.update(nodeUpdate);
 
-        if (updatedNode == null)
+        if (updatedNode.isEmpty())
         {
             log.info("Failed to update node:  {}", nodeUpdate);
             return ResponseEntity.internalServerError().body("failed_node_update");
