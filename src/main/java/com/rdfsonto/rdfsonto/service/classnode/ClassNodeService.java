@@ -12,9 +12,13 @@ public interface ClassNodeService
 
     Optional<ClassNode> findById(Long id);
 
+    List<ClassNode> findNeighbours(long id, int maxDistance, List<String> allowedRelationships);
+
     Optional<ClassNode> save(ClassNode node);
 
     Optional<ClassNode> update(ClassNode node);
 
     boolean deleteById(long id);
+
+    ProjectNodeMetadata findProjectNodeMetaData(String projectTag);
 }

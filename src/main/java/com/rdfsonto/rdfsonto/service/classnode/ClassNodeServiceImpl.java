@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,6 +14,7 @@ import com.rdfsonto.rdfsonto.repository.classnode.ClassNodeNeo4jDriverRepository
 import com.rdfsonto.rdfsonto.repository.classnode.ClassNodeRepository;
 import com.rdfsonto.rdfsonto.repository.classnode.ClassNodeVo;
 import com.rdfsonto.rdfsonto.repository.classnode.ClassNodeVoMapper;
+import com.rdfsonto.rdfsonto.service.project.ProjectService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,6 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class ClassNodeServiceImpl implements ClassNodeService
 {
+    private final static long MAX_NUMBER_OF_NEIGHBOURS = 1000;
     private final ClassNodeRepository classNodeRepository;
     private final ClassNodeNeo4jDriverRepository classNodeNeo4jDriverRepository;
     private final ClassNodeMapper classNodeMapper;
@@ -213,6 +216,20 @@ public class ClassNodeServiceImpl implements ClassNodeService
     {
         classNodeRepository.deleteById(id);
         return !classNodeRepository.existsById(id);
+    }
+
+    @Override
+    public ProjectNodeMetadata findProjectNodeMetaData(final String projectTag)
+    {
+        final var propertyKeys = classNodeRepository.findAllPropertyKeys(projectTag);
+        final var relationshipTypes = classNodeRepository.findAllRelationshipTypes(projectTag);
+        final var labels = classNodeRepository.findAllLabels(projectTag);
+
+        return ProjectNodeMetadata.builder()
+            .withPropertyKeys(propertyKeys)
+            .withRelationshipTypes(relationshipTypes)
+            .withNodeLabels(labels)
+            .build();
     }
 
     private void connectOutgoing(final ClassNodeVo originalNode, final ClassNodeVo neighbour, final String relationship)

@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.rdfsonto.rdfsonto.repository.classnode.ClassNodeRepository;
@@ -57,6 +58,21 @@ public class ClassNodeController
         final var nodes = classNodeService.findByIds(nodeIds);
 
         return ResponseEntity.ok(nodes);
+    }
+
+    @GetMapping("/neighbours/{id}")
+    ResponseEntity<?> getClassNodeNeighbours(@PathVariable final long id,
+                                             final int maxDistance,
+                                             @RequestParam final List<String> allowedRelationships)
+    {
+        if (!classNodeRepository.existsById(id))
+        {
+            return ResponseEntity.notFound().build();
+        }
+
+        final var neighbours = classNodeService.findNeighbours(id, maxDistance, allowedRelationships);
+
+        return ResponseEntity.ok(neighbours);
     }
 
     @PostMapping

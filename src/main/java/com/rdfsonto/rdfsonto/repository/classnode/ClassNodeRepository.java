@@ -32,6 +32,33 @@ public interface ClassNodeRepository extends Neo4jRepository<ClassNodeVo, Long>
 
     @Query("""
         MATCH (n:Resource) WHERE id(n) = $nodeId
+        CALL apoc.neighbors.tohop(n, "<|>", $maxDistance)
+        YIELD node
+        RETURN node
+        UNION
+        MATCH (n:Resource) WHERE id(n) = $nodeId
+        RETURN n as node
+        """)
+    List<ClassNodeVo> findAllNeighbours(@Param("maxDistance") final int maxDistance, @Param("nodeId") final long sourceNodeId);
+
+    @Query("""
+        MATCH (n:Resource) WHERE id(n) = $nodeId
+        CALL apoc.neighbors.tohop.count(n, "<|>", $maxDistance)
+        YIELD value
+        RETURN value
+        """)
+    int countAllNeighbours(@Param("maxDistance") final int maxDistance, @Param("nodeId") final long sourceNodeId);
+
+    @Query("""
+        MATCH (n:Resource)
+        WHERE NOT (n)-[:`http://www.w3.org/2000/01/rdf-schema#subClassOf`]->()
+        AND ()-[:`http://www.w3.org/2000/01/rdf-schema#subClassOf`]->(n)
+        RETURN n
+        """)
+    List<ClassNodeVo> findAllHierarchyRoots(final List<String> relationships);
+
+    @Query("""
+        MATCH (n:Resource) WHERE id(n) = $nodeId
         UNWIND keys(n) AS prop
         RETURN prop
         """)
