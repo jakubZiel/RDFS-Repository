@@ -28,6 +28,7 @@ public class ClassNodeServiceImpl implements ClassNodeService
     private final ClassNodeNeo4jDriverRepository classNodeNeo4jDriverRepository;
     private final ClassNodeMapper classNodeMapper;
     private final ClassNodeVoMapper classNodeVoMapper;
+    private final ProjectService projectService;
 
     @Override
     public List<ClassNode> findByIds(final List<Long> ids)
@@ -54,6 +55,18 @@ public class ClassNodeServiceImpl implements ClassNodeService
     }
 
     @Override
+    public List<ClassNode> findByPropertyValue(final long projectId, final String propertyKey, final String value)
+    {
+        final var projectTag = projectService.getProjectTag(projectId);
+
+        final var nodeIds = classNodeRepository.findAllClassNodesVoByPropertyValue(propertyKey, value, projectTag).stream()
+            .map(ClassNodeVo::getId)
+            .toList();
+
+        return findByIds(nodeIds);
+    }
+
+    @Override
     public Optional<ClassNode> findById(final Long id)
     {
         final var notHydratedNode = classNodeRepository.findById(id);
@@ -67,6 +80,24 @@ public class ClassNodeServiceImpl implements ClassNodeService
         final var outgoing = classNodeRepository.findAllOutgoingNeighbours(id);
 
         return Optional.of(classNodeMapper.mapToDomain(notHydratedNode.get(), incoming, outgoing));
+    }
+
+    @Override
+    public List<ClassNode> findNeighbours(final long id, final int maxDistance, final List<String> allowedRelationships)
+    {
+        final var numberOfNeighbours = classNodeRepository.countAllNeighbours(maxDistance, id);
+
+        if (numberOfNeighbours > MAX_NUMBER_OF_NEIGHBOURS)
+        {
+            log.warn("Handling more than {} number of neighbours", numberOfNeighbours);
+            throw new NotImplementedException();
+        }
+
+        final var neighbourIds = classNodeRepository.findAllNeighbours(maxDistance, id).stream()
+            .map(ClassNodeVo::getId)
+            .toList();
+
+        return findByIds(neighbourIds);
     }
 
     // TODO take care of more types of relationship coming from the same node

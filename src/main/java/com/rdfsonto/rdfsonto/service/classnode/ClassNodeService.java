@@ -8,6 +8,8 @@ public interface ClassNodeService
 {
     List<ClassNode> findByIds(List<Long> ids);
 
+    List<ClassNode> findByPropertyValue(long projectId, String propertyKey, String value);
+
     Optional<ClassNode> findById(Long id);
 
     Optional<ClassNode> save(ClassNode node);

@@ -31,6 +31,7 @@ public class ClassNodeVo
     @DynamicLabels
     private List<String> classLabels;
 
+    //TODO check if it works
     @CompositeProperty
     private Map<String, Object> properties;
 

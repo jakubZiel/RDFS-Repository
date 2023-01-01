@@ -44,5 +44,33 @@ public interface ClassNodeRepository extends Neo4jRepository<ClassNodeVo, Long>
         """)
     List<Object> getAllNodeValues(@Param("nodeId") long id);
 
+    @Query("""
+        CALL db.relationshipTypes()
+        YIELD relationshipType
+        RETURN relationshipType
+        """)
+    List<String> findAllRelationshipTypes(final String projectTag);
+
+    @Query("""
+        CALL db.labels()
+        YIELD label
+        RETURN label
+         """)
+    List<String> findAllLabels(final String projectTag);
+
+    @Query("""
+        CALL db.propertyKeys()
+        YIELD propertyKey
+        RETURN propertyKey
+        """)
+    List<String> findAllPropertyKeys(final String projectTag);
+
+    @Query("""
+        MATCH (n:Resource)
+        WHERE n.`$key` = "$value"
+        RETURN n
+        """)
+    List<ClassNodeVo> findAllClassNodesVoByPropertyValue(@Param("key") String key, @Param("value") String value, @Param("tag") String tag);
+
     Long countAllByClassLabelsContaining(String projectTag);
 }

@@ -22,4 +22,6 @@ public interface ProjectService
     ProjectNode update(ProjectNode update);
 
     void delete(ProjectNode project);
+
+    String getProjectTag(long projectId);
 }

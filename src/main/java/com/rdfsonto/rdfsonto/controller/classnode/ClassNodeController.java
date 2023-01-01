@@ -148,6 +148,36 @@ public class ClassNodeController
         return ResponseEntity.internalServerError().body(responses);
     }
 
+    @GetMapping
+    ResponseEntity<?> getProjectNodeMetaData(final long projectId)
+    {
+        if (projectService.findById(projectId).isEmpty())
+        {
+            return ResponseEntity.notFound().build();
+        }
+        final var projectTag = projectService.getProjectTag(projectId);
+
+        return ResponseEntity.ok(classNodeService.findProjectNodeMetaData(projectTag));
+    }
+
+    @GetMapping("/by_property/project/{projectId}}")
+    ResponseEntity<?> getNodesByPropertyValue(@PathVariable final long projectId,
+                                              @RequestParam final String propertyKey,
+                                              @RequestParam final String propertyValue)
+    {
+        final var project = projectService.findById(projectId);
+
+        if (project.isEmpty())
+        {
+            log.warn("Can not find nodes 'by_property' in project id: {}, because it does not exist", projectId);
+            return ResponseEntity.badRequest().body("invalid_project_id");
+        }
+
+        final var nodes = classNodeService.findByPropertyValue(projectId, propertyKey, propertyValue);
+
+        return ResponseEntity.ok(nodes);
+    }
+
     @GetMapping("/all/{user}/{project}")
     ResponseEntity<List<?>> getAllClassNodesInProject(@PathVariable String user, @PathVariable String project)
     {

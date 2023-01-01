@@ -3,6 +3,7 @@ package com.rdfsonto.rdfsonto.service.project;
 import java.util.List;
 import java.util.Optional;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.springframework.stereotype.Service;
 
 import com.rdfsonto.rdfsonto.repository.project.ProjectNode;
@@ -77,5 +78,11 @@ public class ProjectServiceImpl implements ProjectService
         }
 
         projectRepository.delete(project);
+    }
+
+    @Override
+    public String getProjectTag(final long projectId)
+    {
+        throw new NotImplementedException();
     }
 }
