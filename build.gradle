@@ -12,6 +12,11 @@ configurations {
     compileOnly {
         extendsFrom annotationProcessor
     }
+
+}
+
+configurations.configureEach {
+    exclude group: 'org.slf4j', module: 'slf4j-nop'
 }
 
 repositories {

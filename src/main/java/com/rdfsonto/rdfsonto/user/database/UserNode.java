@@ -36,5 +36,3 @@ public class UserNode
     @Relationship(type = "OWNER", direction = Relationship.Direction.OUTGOING)
     Set<ProjectNode> projectSet;
 }
-
-

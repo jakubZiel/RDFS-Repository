@@ -50,7 +50,7 @@ public class UserServiceImpl implements UserService
     {
         if (userRepository.findById(user.getId()).isEmpty())
         {
-            log.warn("Attempted to deleted non-existing user id: {}", user.getId());
+            log.warn("Attempted to delete non-existing user id: {}", user.getId());
             return;
         }
 
