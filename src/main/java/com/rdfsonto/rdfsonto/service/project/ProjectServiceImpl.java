@@ -3,13 +3,13 @@ package com.rdfsonto.rdfsonto.service.project;
 import java.util.List;
 import java.util.Optional;
 
-import org.apache.commons.lang3.NotImplementedException;
 import org.springframework.stereotype.Service;
 
 import com.rdfsonto.rdfsonto.repository.project.ProjectNode;
 import com.rdfsonto.rdfsonto.repository.project.ProjectRepository;
 import com.rdfsonto.rdfsonto.repository.user.UserNode;
 import com.rdfsonto.rdfsonto.service.security.AuthService;
+import com.rdfsonto.rdfsonto.service.user.UserService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +22,7 @@ public class ProjectServiceImpl implements ProjectService
 {
     private final AuthService authService;
     private final ProjectRepository projectRepository;
+    private final UserService userService;
 
     @Override
     public Optional<ProjectNode> findById(final long projectId)
@@ -73,7 +74,7 @@ public class ProjectServiceImpl implements ProjectService
     {
         if (projectRepository.findById(project.getId()).isEmpty())
         {
-            log.warn("Attempted to deleted non-existing project id: {}", project.getId());
+            log.warn("Attempted to delete non-existing project id: {}", project.getId());
             return;
         }
 
@@ -81,8 +82,13 @@ public class ProjectServiceImpl implements ProjectService
     }
 
     @Override
-    public String getProjectTag(final long projectId)
+    public String getProjectTag(final ProjectNode project)
     {
-        throw new NotImplementedException();
+        final var id = project.getId();
+        final var userNode = userService.findById(id);
+
+        final var user = userNode.orElseThrow(() -> new IllegalStateException("Can not get a tag for a non-existing user, id: %s".formatted(id)));
+
+        return "%s@%s".formatted(id, user.getId());
     }
 }

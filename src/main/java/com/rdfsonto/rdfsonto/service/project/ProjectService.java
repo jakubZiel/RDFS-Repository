@@ -23,5 +23,5 @@ public interface ProjectService
 
     void delete(ProjectNode project);
 
-    String getProjectTag(long projectId);
+    String getProjectTag(ProjectNode project);
 }

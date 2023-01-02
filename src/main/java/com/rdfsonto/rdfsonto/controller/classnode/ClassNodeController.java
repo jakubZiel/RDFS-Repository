@@ -167,11 +167,14 @@ public class ClassNodeController
     @GetMapping
     ResponseEntity<?> getProjectNodeMetaData(final long projectId)
     {
-        if (projectService.findById(projectId).isEmpty())
+        final var project = projectService.findById(projectId);
+
+        if (project.isEmpty())
         {
             return ResponseEntity.notFound().build();
         }
-        final var projectTag = projectService.getProjectTag(projectId);
+
+        final var projectTag = projectService.getProjectTag(project.get());
 
         return ResponseEntity.ok(classNodeService.findProjectNodeMetaData(projectTag));
     }

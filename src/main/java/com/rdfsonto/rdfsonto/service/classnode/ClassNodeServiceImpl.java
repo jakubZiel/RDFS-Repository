@@ -60,7 +60,10 @@ public class ClassNodeServiceImpl implements ClassNodeService
     @Override
     public List<ClassNode> findByPropertyValue(final long projectId, final String propertyKey, final String value)
     {
-        final var projectTag = projectService.getProjectTag(projectId);
+        final var project = projectService.findById(projectId)
+            .orElseThrow(() -> new IllegalStateException("Project id: %s does not exist".formatted(projectId)));
+
+        final var projectTag = projectService.getProjectTag(project);
 
         final var nodeIds = classNodeRepository.findAllClassNodesVoByPropertyValue(propertyKey, value, projectTag).stream()
             .map(ClassNodeVo::getId)
