@@ -52,8 +52,13 @@ dependencies {
 
     implementation 'org.springdoc:springdoc-openapi-ui:1.6.13'
 
-
     runtimeOnly "com.h2database:h2"
+
+    dependencyManagement {
+        imports {
+            mavenBom "org.testcontainers:testcontainers-bom:1.17.6"
+        }
+    }
 }
 
 tasks.named('test') {
