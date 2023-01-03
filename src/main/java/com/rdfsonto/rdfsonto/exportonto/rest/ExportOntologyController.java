@@ -12,9 +12,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.rdfsonto.rdfsonto.exportonto.service.ExportOntologyService;
+import com.rdfsonto.rdfsonto.infrastructure.workspacemanagement.WorkspaceManagementService;
 import com.rdfsonto.rdfsonto.project.service.ProjectService;
 import com.rdfsonto.rdfsonto.rdf4j.RdfFormatParser;
-import com.rdfsonto.rdfsonto.exportonto.service.ExportOntologyService;
 import com.rdfsonto.rdfsonto.user.service.UserService;
 
 import lombok.RequiredArgsConstructor;
@@ -30,6 +31,7 @@ public class ExportOntologyController
     private final ExportOntologyService exportOntologyService;
     private final ProjectService projectService;
     private final UserService userService;
+    private final WorkspaceManagementService workspaceManagementService;
 
     @PostMapping
     public ResponseEntity<?> exportRDFResource(final ExportOntologyRequest exportOntologyRequest, final HttpServletResponse response)
@@ -84,7 +86,7 @@ public class ExportOntologyController
             return ResponseEntity.internalServerError().body("ontology-export-error");
         }
 
-        exportOntologyService.clearWorkspace(extractedOntology.path());
+        workspaceManagementService.clearWorkspace(extractedOntology.path());
 
         return ResponseEntity.ok(exportOntologyRequest.fileName());
     }

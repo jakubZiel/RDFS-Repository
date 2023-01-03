@@ -12,6 +12,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import com.rdfsonto.rdfsonto.classnode.database.ClassNodeRepository;
+import com.rdfsonto.rdfsonto.infrastructure.workspacemanagement.WorkspaceManagementService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -81,19 +82,6 @@ class ExportOntologyServiceImpl implements ExportOntologyService
             return ExportOntologyResult.builder()
                 .withIoException(ioException)
                 .build();
-        }
-    }
-
-    @Override
-    public void clearWorkspace(final Path filePath)
-    {
-        try
-        {
-            Files.deleteIfExists(filePath);
-        }
-        catch (IOException e)
-        {
-            log.error("Failed to delete file: {}", filePath);
         }
     }
 
