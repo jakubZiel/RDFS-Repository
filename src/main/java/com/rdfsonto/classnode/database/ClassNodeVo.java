@@ -31,7 +31,7 @@ public class ClassNodeVo
     private List<String> classLabels;
 
     //TODO check if it works
-    private Map<String, String> properties;
+    private Map<String, Object> properties;
 
     @Relationship(direction = INCOMING)
     private Map<String, List<ClassNodeVo>> neighbours;
@@ -39,16 +39,4 @@ public class ClassNodeVo
     private String relation;
     private String uri;
     private Long source;
-
-    public void setProperties(List<String> props)
-    {
-        this.properties = new HashMap<>();
-
-        props.stream()
-            .filter(prop -> !prop.startsWith("uri"))
-            .forEach(prop -> {
-                final var keyVal = prop.split(";");
-                properties.put(keyVal[0], keyVal[1]);
-            });
-    }
 }

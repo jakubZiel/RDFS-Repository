@@ -1,7 +1,6 @@
 package com.rdfsonto.classnode.database;
 
 import org.neo4j.driver.Record;
-import org.neo4j.driver.Value;
 import org.springframework.stereotype.Component;
 
 
@@ -15,7 +14,7 @@ public class ClassNodePropertiesVoMapper
     {
         return ClassNodePropertiesVo.builder()
             .withNodeId(record.get(NODE_ID_KEY).asLong())
-            .withProperties(record.get(PROPERTIES_KEY).asMap(Value::toString))
+            .withProperties(record.get(PROPERTIES_KEY).asMap())
             .build();
     }
 }

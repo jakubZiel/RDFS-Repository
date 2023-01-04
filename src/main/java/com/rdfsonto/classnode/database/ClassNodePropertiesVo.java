@@ -6,6 +6,6 @@ import lombok.Builder;
 
 
 @Builder(setterPrefix = "with")
-record ClassNodePropertiesVo(Long nodeId, Map<String, String> properties)
+record ClassNodePropertiesVo(Long nodeId, Map<String, Object> properties)
 {
 }

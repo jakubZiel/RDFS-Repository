@@ -77,7 +77,7 @@ public class ClassNodeNeo4jDriverRepository
         }
     }
 
-    public Map<Long, Map<String, String>> findAllNodeProperties(final List<Long> ids)
+    public Map<Long, Map<String, Object>> findAllNodeProperties(final List<Long> ids)
     {
         try (final var session = driver.session())
         {

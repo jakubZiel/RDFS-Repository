@@ -10,9 +10,9 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepository;
 import com.rdfsonto.classnode.database.ClassNodeRepository;
 import com.rdfsonto.classnode.database.ClassNodeVo;
-import com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepository;
 import com.rdfsonto.classnode.database.ClassNodeVoMapper;
 import com.rdfsonto.project.service.ProjectService;
 
@@ -43,11 +43,17 @@ public class ClassNodeServiceImpl implements ClassNodeService
             throw new IllegalStateException("Not all nodes exist");
         }
 
+        final var properties = classNodeNeo4jDriverRepository.findAllNodeProperties(ids);
         final var incoming = classNodeRepository.findAllIncomingNeighbours(ids);
         final var outgoing = classNodeNeo4jDriverRepository.findAllOutgoingNeighbours(ids);
 
         final var groupedIncoming = incoming.stream().collect(Collectors.groupingBy(ClassNodeVo::getSource));
         final var groupedOutgoing = outgoing.stream().collect(Collectors.groupingBy(ClassNodeVo::getSource));
+
+        notHydratedNodes.forEach(node -> {
+            final var props = properties.get(node.getId());
+            node.setProperties(props);
+        });
 
         return notHydratedNodes.stream()
             .map(node ->
@@ -81,6 +87,10 @@ public class ClassNodeServiceImpl implements ClassNodeService
         {
             return Optional.empty();
         }
+
+        final var properties = classNodeNeo4jDriverRepository.findAllNodeProperties(List.of(id));
+
+        notHydratedNode.ifPresent(x -> x.setProperties(properties.get(id)));
 
         final var incoming = classNodeRepository.findAllIncomingNeighbours(id);
         final var outgoing = classNodeRepository.findAllOutgoingNeighbours(id);
