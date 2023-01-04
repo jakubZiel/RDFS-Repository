@@ -2,8 +2,10 @@ package com.rdfsonto.classnode.database;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.neo4j.driver.Driver;
+import org.neo4j.driver.exceptions.Neo4jException;
 import org.springframework.stereotype.Component;
 
 import lombok.RequiredArgsConstructor;
@@ -37,12 +39,19 @@ public class ClassNodeNeo4jDriverRepository
         RETURN relation
         """;
 
+    private static final String FIND_ALL_NODE_PROPERTIES_QUERY_TEMPLATE = """
+        UNWIND $nodeIds AS nodeId
+        MATCH (n:Resource) WHERE id(n) = nodeId
+        RETURN id(n) as id, properties(n) as properties
+        """;
+
     private static final String NEIGHBOUR_RECORD_KEY = "neighbour";
     private static final String RELATION_RECORD_KEY = "relation";
     private static final String SOURCE_NODE_ID_RECORD_KEY = "source";
 
     private final Driver driver;
     private final ClassNodeVoMapper classNodeVoMapper;
+    private final ClassNodePropertiesVoMapper classNodePropertiesVoMapper;
 
     public List<ClassNodeVo> findAllOutgoingNeighbours(final List<Long> ids)
     {
@@ -61,9 +70,27 @@ public class ClassNodeNeo4jDriverRepository
                 record.get(RELATION_RECORD_KEY).asString(),
                 record.get(SOURCE_NODE_ID_RECORD_KEY).asLong()));
         }
-        catch (final Exception exception)
+        catch (final Neo4jException exception)
         {
             log.error("Failed to fetch for outgoing neighbours for nodes with ids: {}, {}", ids, exception.getMessage());
+            return null;
+        }
+    }
+
+    public Map<Long, Map<String, String>> findAllNodeProperties(final List<Long> ids)
+    {
+        try (final var session = driver.session())
+        {
+            final var paramMap = Map.of("nodeIds", (Object) ids);
+            final var queryResult = session.run(FIND_ALL_NODE_PROPERTIES_QUERY_TEMPLATE, paramMap);
+
+            return queryResult.stream()
+                .map(classNodePropertiesVoMapper::mapToVo)
+                .collect(Collectors.toMap(ClassNodePropertiesVo::nodeId, ClassNodePropertiesVo::properties));
+        }
+        catch (final Neo4jException exception)
+        {
+            log.error("Failed to fetch all properties for nodes with ids: {}, {}", ids, exception.getMessage());
             return null;
         }
     }

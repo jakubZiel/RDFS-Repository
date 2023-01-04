@@ -13,7 +13,7 @@ import lombok.Builder;
 public record ClassNode(Long id, List<String> classLabels,
                         Map<Long, String> incomingNeighbours,
                         Map<Long, String> outgoingNeighbours,
-                        Map<String, Object> properties,
+                        Map<String, String> properties,
                         String uri)
 {
 }

@@ -200,6 +200,6 @@ public class ClassNodeController
     @GetMapping("/all/{user}/{project}")
     ResponseEntity<List<?>> getAllClassNodesInProject(@PathVariable String user, @PathVariable String project)
     {
-        return null;
+        return ResponseEntity.ok(null);
     }
 }

@@ -57,6 +57,7 @@ public interface ClassNodeRepository extends Neo4jRepository<ClassNodeVo, Long>
         """)
     List<ClassNodeVo> findAllHierarchyRoots(final List<String> relationships);
 
+    // TODO use properties(n) neo4j
     @Query("""
         MATCH (n:Resource) WHERE id(n) = $nodeId
         UNWIND keys(n) AS prop
@@ -64,6 +65,7 @@ public interface ClassNodeRepository extends Neo4jRepository<ClassNodeVo, Long>
         """)
     List<String> getAllNodeProperties(@Param("nodeId") long id);
 
+    // TODO use properties(n) neo4j
     @Query("""
         MATCH (n:Resource) WHERE id(n) = $nodeId
         UNWIND keys(n) AS prop
@@ -97,7 +99,7 @@ public interface ClassNodeRepository extends Neo4jRepository<ClassNodeVo, Long>
         WHERE n.`$key` = "$value"
         RETURN n
         """)
-    List<ClassNodeVo> findAllClassNodesVoByPropertyValue(@Param("key") String key, @Param("value") String value, @Param("tag") String tag);
+    List<ClassNodeVo> findAllClassNodesByPropertyValue(@Param("key") String key, @Param("value") String value, @Param("tag") String tag);
 
     Long countAllByClassLabelsContaining(String projectTag);
 }

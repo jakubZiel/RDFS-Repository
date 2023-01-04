@@ -65,7 +65,7 @@ public class ClassNodeServiceImpl implements ClassNodeService
 
         final var projectTag = projectService.getProjectTag(project);
 
-        final var nodeIds = classNodeRepository.findAllClassNodesVoByPropertyValue(propertyKey, value, projectTag).stream()
+        final var nodeIds = classNodeRepository.findAllClassNodesByPropertyValue(propertyKey, value, projectTag).stream()
             .map(ClassNodeVo::getId)
             .toList();
 

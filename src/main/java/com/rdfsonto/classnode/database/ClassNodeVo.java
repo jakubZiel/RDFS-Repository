@@ -6,7 +6,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.springframework.data.neo4j.core.schema.CompositeProperty;
 import org.springframework.data.neo4j.core.schema.DynamicLabels;
 import org.springframework.data.neo4j.core.schema.GeneratedValue;
 import org.springframework.data.neo4j.core.schema.Id;
@@ -32,8 +31,7 @@ public class ClassNodeVo
     private List<String> classLabels;
 
     //TODO check if it works
-    @CompositeProperty
-    private Map<String, Object> properties;
+    private Map<String, String> properties;
 
     @Relationship(direction = INCOMING)
     private Map<String, List<ClassNodeVo>> neighbours;
