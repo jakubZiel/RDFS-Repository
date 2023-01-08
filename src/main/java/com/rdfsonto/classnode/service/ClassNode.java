@@ -11,8 +11,8 @@ import lombok.Builder;
 @JsonInclude(JsonInclude.Include.NON_NULL)
 @Builder(setterPrefix = "with", toBuilder = true)
 public record ClassNode(Long id, List<String> classLabels,
-                        Map<Long, String> incomingNeighbours,
-                        Map<Long, String> outgoingNeighbours,
+                        Map<Long, List<String>> incomingNeighbours,
+                        Map<Long, List<String>> outgoingNeighbours,
                         Map<String, Object> properties,
                         String uri)
 {

@@ -1,5 +1,8 @@
 package com.rdfsonto.classnode.service;
 
+import static java.util.Collections.singletonList;
+
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -14,10 +17,22 @@ class ClassNodeMapper
     ClassNode mapToDomain(final ClassNodeVo classNodeVo, final List<ClassNodeVo> incoming, final List<ClassNodeVo> outgoing)
     {
         final var incomingMap =
-            incoming != null ? incoming.stream().collect(Collectors.toMap(ClassNodeVo::getId, ClassNodeVo::getRelation)) : null;
+            incoming != null ? incoming.stream().collect(Collectors.toMap(
+                ClassNodeVo::getId,
+                this::neighboursList,
+                (neighbours, neighbour) -> {
+                    neighbours.addAll(neighbour);
+                    return neighbours;
+                })) : null;
 
         final var outgoingMap =
-            outgoing != null ? outgoing.stream().collect(Collectors.toMap(ClassNodeVo::getId, ClassNodeVo::getRelation)) : null;
+            outgoing != null ? outgoing.stream().collect(Collectors.toMap(
+                ClassNodeVo::getId,
+                this::neighboursList,
+                (neighbours, neighbour) -> {
+                    neighbours.addAll(neighbour);
+                    return neighbours;
+                })) : null;
 
         return ClassNode.builder()
             .withId(classNodeVo.getId())
@@ -27,5 +42,10 @@ class ClassNodeMapper
             .withOutgoingNeighbours(outgoingMap)
             .withIncomingNeighbours(incomingMap)
             .build();
+    }
+
+    private List<String> neighboursList(final ClassNodeVo node)
+    {
+        return new ArrayList<>(singletonList(node.getRelation()));
     }
 }

@@ -43,5 +43,9 @@ out/
 /src/main/resources/rdfs/
 /src/main/resources/rdf/
 
+## Docker
 /docker/neo4j
+/docker/keycloak
 /docker/kafka
+/docker/test/neo4j
+

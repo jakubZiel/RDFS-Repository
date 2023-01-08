@@ -17,7 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class ClassNodeNeo4jDriverRepository
 {
-    private static final String NEIGHBOURS_QUERY_TEMPLATE = """
+    private static final String OUTGOING_NEIGHBOURS_QUERY_TEMPLATE = """
         MATCH (n:Resource)-[rel]->(neighbour:Resource)
         WHERE id(n) IN $nodeIds
         RETURN neighbour, id(n) as source, type(rel) as relation
@@ -63,7 +63,7 @@ public class ClassNodeNeo4jDriverRepository
         try (final var session = driver.session())
         {
             final var paramMap = Map.of("nodeIds", (Object) ids);
-            final var queryResult = session.run(NEIGHBOURS_QUERY_TEMPLATE, paramMap);
+            final var queryResult = session.run(OUTGOING_NEIGHBOURS_QUERY_TEMPLATE, paramMap);
 
             return queryResult.list(record -> classNodeVoMapper.mapToVo(
                 record.get(NEIGHBOUR_RECORD_KEY).asNode(),

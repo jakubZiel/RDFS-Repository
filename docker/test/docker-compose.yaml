@@ -1,0 +1,18 @@
+version: '3.8'
+services:
+  neo4j:
+    image: neo4j:5.1
+    hostname: neo4j-test
+    container_name: neo4j-test
+    ports:
+      - "7475:7474"
+      - "7688:7687"
+    volumes:
+      - ./neo4j/conf:/conf
+      - ./neo4j/data:/data
+      - ./neo4j/logs:/logs
+      - ./neo4j/plugins:/plugins
+      - ../workspace:/workspace
+    environment:
+      - NEO4JLABS_PLUGINS=["apoc", "n10s"]
+      - NEO4J_AUTH=none

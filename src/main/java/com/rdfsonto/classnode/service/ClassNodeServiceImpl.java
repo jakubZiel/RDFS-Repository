@@ -116,7 +116,7 @@ public class ClassNodeServiceImpl implements ClassNodeService
         return findByIds(neighbourIds);
     }
 
-    // TODO take care of more types of relationship coming from the same node
+    // TODO take care of more types of relationship coming from the same node - TEST IT!!!
     @Override
     public Optional<ClassNode> save(final ClassNode node)
     {
@@ -130,37 +130,41 @@ public class ClassNodeServiceImpl implements ClassNodeService
         savedVo.setNeighbours(new HashMap<>());
 
         node.incomingNeighbours().keySet().forEach(neighbour -> {
-            final var relationship = node.incomingNeighbours().get(neighbour);
+            final var relationships = node.incomingNeighbours().get(neighbour);
 
-            final var neighboursByRelationship = savedVo.getNeighbours().get(relationship);
+            relationships.forEach(relationship -> {
+                final var neighboursByRelationship = savedVo.getNeighbours().get(relationship);
 
-            if (neighboursByRelationship != null)
-            {
-                neighboursByRelationship.add(
-                    incoming.stream()
-                        .filter(n -> n.getId().equals(neighbour))
-                        .findFirst()
-                        .orElseThrow());
-            }
-            else
-            {
-                savedVo.getNeighbours().put(relationship,
-                    new ArrayList<>(List.of(incoming.stream()
-                        .filter(n -> n.getId().equals(neighbour))
-                        .findFirst()
-                        .orElseThrow())));
-            }
+                if (neighboursByRelationship != null)
+                {
+                    neighboursByRelationship.add(
+                        incoming.stream()
+                            .filter(n -> n.getId().equals(neighbour))
+                            .findFirst()
+                            .orElseThrow());
+                }
+                else
+                {
+                    savedVo.getNeighbours().put(relationship,
+                        new ArrayList<>(List.of(incoming.stream()
+                            .filter(n -> n.getId().equals(neighbour))
+                            .findFirst()
+                            .orElseThrow())));
+                }
+            });
         });
 
         node.outgoingNeighbours().keySet().forEach(neighbour -> {
-            final var relationship = node.outgoingNeighbours().get(neighbour);
+            final var relationships = node.outgoingNeighbours().get(neighbour);
 
-            final var destinationNode = outgoing.stream()
-                .filter(n -> n.getId().equals(neighbour))
-                .findFirst()
-                .orElseThrow();
+            relationships.forEach(relationship -> {
+                final var destinationNode = outgoing.stream()
+                    .filter(n -> n.getId().equals(neighbour))
+                    .findFirst()
+                    .orElseThrow();
 
-            connectOutgoing(savedVo, destinationNode, relationship);
+                connectOutgoing(savedVo, destinationNode, relationship);
+            });
         });
 
         classNodeRepository.saveAll(outgoing);
@@ -192,30 +196,31 @@ public class ClassNodeServiceImpl implements ClassNodeService
         final var incomingNeighbours = originalNode.getNeighbours();
 
         incoming.forEach(neighbour -> {
-            final var relationship = node.incomingNeighbours().get(neighbour.getId());
+            final var relationships = node.incomingNeighbours().get(neighbour.getId());
 
-            if (incomingNeighbours.containsKey(relationship))
-            {
-                final var neighbourByRelationship = incomingNeighbours.get(relationship);
-
-                final var isNewRelation = neighbourByRelationship.stream()
-                    .noneMatch(n -> n.getId().equals(neighbour.getId()));
-
-                if (isNewRelation)
+            relationships.forEach(relationship -> {
+                if (incomingNeighbours.containsKey(relationship))
                 {
-                    neighbourByRelationship.add(neighbour);
+                    final var neighbourByRelationship = incomingNeighbours.get(relationship);
+
+                    final var isNewRelation = neighbourByRelationship.stream()
+                        .noneMatch(n -> n.getId().equals(neighbour.getId()));
+
+                    if (isNewRelation)
+                    {
+                        neighbourByRelationship.add(neighbour);
+                    }
                 }
-            }
-            else
-            {
-                incomingNeighbours.put(relationship, new ArrayList<>(List.of(neighbour)));
-            }
+                else
+                {
+                    incomingNeighbours.put(relationship, new ArrayList<>(List.of(neighbour)));
+                }
+            });
         });
 
         outgoing.forEach(neighbour -> {
-            final var relationship = node.outgoingNeighbours().get(neighbour.getId());
-
-            connectOutgoing(originalNode, neighbour, relationship);
+            final var relationships = node.outgoingNeighbours().get(neighbour.getId());
+            relationships.forEach(relationship -> connectOutgoing(originalNode, neighbour, relationship));
         });
 
         classNodeRepository.saveAll(outgoing);
