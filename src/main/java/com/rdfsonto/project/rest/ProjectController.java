@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -61,8 +62,11 @@ public class ProjectController
     }
 
     @PostMapping
-    public ResponseEntity<ProjectNode> create(final String projectName, final long userId)
+    public ResponseEntity<ProjectNode> create(@RequestBody final CreateProjectRequest createProjectRequest)
     {
+        final var projectName = createProjectRequest.projectName();
+        final var userId = createProjectRequest.userId();
+
         final var owner = userService.findById(userId);
 
         if (owner.isEmpty())
