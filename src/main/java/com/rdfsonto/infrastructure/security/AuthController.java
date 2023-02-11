@@ -4,6 +4,7 @@ import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 
 import org.apache.commons.validator.routines.EmailValidator;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -49,7 +50,7 @@ public class AuthController
         {
             log.warn("User with username: {} already exists", keycloakUserRequest.username());
 
-            return ResponseEntity.badRequest().body("invalid_username");
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
         }
 
         final var savedKeycloakUser = authService.save(keycloakUserRequest);
@@ -61,10 +62,10 @@ public class AuthController
     private boolean validate(final KeycloakUser keycloakUserRequest)
     {
         return emailValidator.isValid(keycloakUserRequest.email()) &&
-            keycloakUserRequest.username() != null &&
-            keycloakUserRequest.password() != null &&
-            keycloakUserRequest.lastName() != null &&
-            keycloakUserRequest.firstName() != null;
+            keycloakUserRequest.username() != null && !keycloakUserRequest.username().isBlank() &&
+            keycloakUserRequest.password() != null && !keycloakUserRequest.password().isBlank() &&
+            keycloakUserRequest.lastName() != null && !keycloakUserRequest.lastName().isBlank() &&
+            keycloakUserRequest.firstName() != null && !keycloakUserRequest.firstName().isBlank();
     }
 
     private UserNode mapToNode(final KeycloakUser keycloakUser)

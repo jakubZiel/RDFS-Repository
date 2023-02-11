@@ -84,11 +84,11 @@ public class ProjectServiceImpl implements ProjectService
     @Override
     public String getProjectTag(final ProjectNode project)
     {
-        final var id = project.getId();
-        final var userNode = userService.findById(id);
+        final var ownerId = project.getOwnerId();
+        final var userNode = userService.findById(ownerId);
 
-        final var user = userNode.orElseThrow(() -> new IllegalStateException("Can not get a tag for a non-existing user, id: %s".formatted(id)));
+        final var user = userNode.orElseThrow(() -> new IllegalStateException("Can not get a tag for a non-existing user, id: %s".formatted(ownerId)));
 
-        return "%s@%s".formatted(id, user.getId());
+        return "%s@%s".formatted(user.getId(), project.getId());
     }
 }

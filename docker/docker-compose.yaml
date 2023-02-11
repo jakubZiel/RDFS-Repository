@@ -16,7 +16,6 @@ services:
     environment:
       - NEO4JLABS_PLUGINS=["apoc", "n10s"]
     
-# TODO - add automated creation of super user
   postgres:
     image: postgres:13.2
     restart: unless-stopped
@@ -26,12 +25,16 @@ services:
       POSTGRES_DB: ${POSTGRESQL_DB}
       POSTGRES_USER: ${POSTGRESQL_USER}
       POSTGRES_PASSWORD: ${POSTGRESQL_PASS}
+    volumes:
+      - ./postgres/data:/var/lib/postgresql/data
 
   keycloak:
     depends_on:
       - postgres
     container_name: local_keycloak
     environment:
+      KEYCLOAK_USER: admin
+      KEYCLOAK_PASSWORD: admin
       DB_VENDOR: postgres
       DB_ADDR: postgres
       DB_DATABASE: ${POSTGRESQL_DB}

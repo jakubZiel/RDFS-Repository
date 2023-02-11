@@ -23,7 +23,7 @@ import net.minidev.json.parser.ParseException;
 class AuthKeycloakClient
 {
     private static final String CLIENT_ID = "admin-cli";
-    private static final String KEYCLOAK_ACCESS_TOKEN_URL = "http://localhost:8888/auth/realms/ontology-editor/protocol/openid-connect/token";
+    private static final String KEYCLOAK_ACCESS_TOKEN_URL = "http://localhost:8888/auth/realms/master/protocol/openid-connect/token";
     private static final String KEYCLOAK_CREATE_USER_URL = "http://localhost:8888/auth/admin/realms/ontology-editor/users";
     private static final String CREATE_KEYCLOAK_USER_REQUEST_BODY_TEMPLATE = """
         {
@@ -45,6 +45,10 @@ class AuthKeycloakClient
     private final JSONParser jsonParser;
     @Value("${custom.keycloak.client.secret}")
     private String CLIENT_SECRET;
+    @Value("${custom.keycloak.admin-login}")
+    private String ADMIN_USERNAME;
+    @Value("${custom.keycloak.admin-password}")
+    private String ADMIN_PASSWORD;
 
     KeycloakUser createKeycloakUser(final KeycloakUser keycloakUser) throws ParseException
     {
@@ -81,8 +85,9 @@ class AuthKeycloakClient
 
         final var form = new LinkedMultiValueMap<>();
         form.add("client_id", CLIENT_ID);
-        form.add("grant_type", "client_credentials");
-        form.add("client_secret", CLIENT_SECRET);
+        form.add("grant_type", "password");
+        form.add("password", ADMIN_PASSWORD);
+        form.add("username", ADMIN_USERNAME);
 
         return new HttpEntity<>(form, headers);
     }

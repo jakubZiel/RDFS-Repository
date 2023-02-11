@@ -1,6 +1,7 @@
 package com.rdfsonto.classnode.database;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.neo4j.repository.Neo4jRepository;
 import org.springframework.data.neo4j.repository.query.Query;
@@ -39,7 +40,7 @@ public interface ClassNodeRepository extends Neo4jRepository<ClassNodeVo, Long>
         MATCH (n:Resource) WHERE id(n) = $nodeId
         RETURN n as node
         """)
-    List<ClassNodeVo> findAllNeighbours(@Param("maxDistance") final int maxDistance, @Param("nodeId") final long sourceNodeId);
+    List<ClassNodeVo> findAllNeighbours(@Param("maxDistance") int maxDistance, @Param("nodeId") long sourceNodeId);
 
     @Query("""
         MATCH (n:Resource) WHERE id(n) = $nodeId
@@ -47,7 +48,7 @@ public interface ClassNodeRepository extends Neo4jRepository<ClassNodeVo, Long>
         YIELD value
         RETURN value
         """)
-    int countAllNeighbours(@Param("maxDistance") final int maxDistance, @Param("nodeId") final long sourceNodeId);
+    int countAllNeighbours(@Param("maxDistance") int maxDistance, @Param("nodeId") long sourceNodeId);
 
     @Query("""
         MATCH (n:Resource)
@@ -55,7 +56,7 @@ public interface ClassNodeRepository extends Neo4jRepository<ClassNodeVo, Long>
         AND ()-[:`http://www.w3.org/2000/01/rdf-schema#subClassOf`]->(n)
         RETURN n
         """)
-    List<ClassNodeVo> findAllHierarchyRoots(final List<String> relationships);
+    List<ClassNodeVo> findAllHierarchyRoots(List<String> relationships);
 
     // TODO use properties(n) neo4j
     @Query("""
@@ -78,21 +79,21 @@ public interface ClassNodeRepository extends Neo4jRepository<ClassNodeVo, Long>
         YIELD relationshipType
         RETURN relationshipType
         """)
-    List<String> findAllRelationshipTypes(final String projectTag);
+    List<String> findAllRelationshipTypes(String projectTag);
 
     @Query("""
         CALL db.labels()
         YIELD label
         RETURN label
          """)
-    List<String> findAllLabels(final String projectTag);
+    List<String> findAllLabels(String projectTag);
 
     @Query("""
         CALL db.propertyKeys()
         YIELD propertyKey
         RETURN propertyKey
         """)
-    List<String> findAllPropertyKeys(final String projectTag);
+    List<String> findAllPropertyKeys(String projectTag);
 
     @Query("""
         MATCH (n:Resource)
@@ -102,4 +103,6 @@ public interface ClassNodeRepository extends Neo4jRepository<ClassNodeVo, Long>
     List<ClassNodeVo> findAllClassNodesByPropertyValue(@Param("key") String key, @Param("value") String value, @Param("tag") String tag);
 
     Long countAllByClassLabelsContaining(String projectTag);
+
+    Optional<ClassNodeVo> findByUri(String uri);
 }

@@ -62,15 +62,34 @@ public class ClassNodeController
 
     @GetMapping("/neighbours/{id}")
     ResponseEntity<?> getClassNodeNeighbours(@PathVariable final long id,
-                                             final int maxDistance,
-                                             @RequestParam final List<String> allowedRelationships)
+                                             @RequestParam final int maxDistance)
     {
         if (!classNodeRepository.existsById(id))
         {
             return ResponseEntity.notFound().build();
         }
 
-        final var neighbours = classNodeService.findNeighbours(id, maxDistance, allowedRelationships);
+        final var neighbours = classNodeService.findNeighbours(id, maxDistance, List.of());
+
+        return ResponseEntity.ok(neighbours);
+    }
+
+    @GetMapping("/neighbours/uri")
+    ResponseEntity<?> getClassNodeNeighboursByUri(@RequestParam final String uri,
+                                                  @RequestParam final int maxDistance,
+                                                  @RequestParam final long projectId)
+    {
+        final var project = projectService.findById(projectId);
+
+        if (project.isEmpty())
+        {
+            log.info("Project id: {} does not exist", projectId);
+            return ResponseEntity.badRequest().body("invalid_project");
+        }
+
+        final var projectTag = projectService.getProjectTag(project.get());
+
+        final var neighbours = classNodeService.findNeighboursByUri(uri, projectTag, maxDistance, List.of());
 
         return ResponseEntity.ok(neighbours);
     }
@@ -164,8 +183,8 @@ public class ClassNodeController
         return ResponseEntity.internalServerError().body(responses);
     }
 
-    @GetMapping
-    ResponseEntity<?> getProjectNodeMetaData(final long projectId)
+    @GetMapping("/metadata")
+    ResponseEntity<?> getProjectNodeMetaData(@RequestParam final long projectId)
     {
         final var project = projectService.findById(projectId);
 
@@ -179,20 +198,18 @@ public class ClassNodeController
         return ResponseEntity.ok(classNodeService.findProjectNodeMetaData(projectTag));
     }
 
-    @GetMapping("/by_property/project/{projectId}}")
-    ResponseEntity<?> getNodesByPropertyValue(@PathVariable final long projectId,
-                                              @RequestParam final String propertyKey,
-                                              @RequestParam final String propertyValue)
+    @PostMapping("/filter")
+    ResponseEntity<?> getNodesFiltered(@RequestBody final FilterPropertyRequest request)
     {
-        final var project = projectService.findById(projectId);
+        final var project = projectService.findById(request.projectId());
 
         if (project.isEmpty())
         {
-            log.warn("Can not find nodes 'by_property' in project id: {}, because it does not exist", projectId);
+            log.warn("Can not find nodes by 'property' in project id: {}, because project does not exist", request.projectId());
             return ResponseEntity.badRequest().body("invalid_project_id");
         }
 
-        final var nodes = classNodeService.findByPropertyValue(projectId, propertyKey, propertyValue);
+        final var nodes = classNodeService.findByPropertiesAndLabels(request.projectId(), request.labels(), request.filterConditions());
 
         return ResponseEntity.ok(nodes);
     }

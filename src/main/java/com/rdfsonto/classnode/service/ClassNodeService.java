@@ -10,7 +10,11 @@ public interface ClassNodeService
 
     List<ClassNode> findByPropertyValue(long projectId, String propertyKey, String value);
 
+    List<ClassNode> findByPropertiesAndLabels(final long projectId, final List<String> labels, final List<FilterCondition> filters);
+
     Optional<ClassNode> findById(Long id);
+
+    List<ClassNode> findNeighboursByUri(String uri, String projectTag, int maxDistance, List<String> allowedRelationships);
 
     List<ClassNode> findNeighbours(long id, int maxDistance, List<String> allowedRelationships);
 

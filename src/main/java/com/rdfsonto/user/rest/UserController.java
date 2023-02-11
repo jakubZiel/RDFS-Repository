@@ -40,6 +40,19 @@ public class UserController
         return ResponseEntity.of(user);
     }
 
+    @GetMapping("/username/{username}")
+    public ResponseEntity<UserNode> getUserByUserName(@PathVariable final String username)
+    {
+        final var user = userService.findByUsername(username);
+
+        if (user.isEmpty())
+        {
+            log.info("User with username: {} does not exist.", username);
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.of(user);
+    }
+
     @GetMapping
     public ResponseEntity<List<UserNode>> getAllUsers()
     {

@@ -44,7 +44,8 @@ public class ClassNodeServiceImpl implements ClassNodeService
         }
 
         final var properties = classNodeNeo4jDriverRepository.findAllNodeProperties(ids);
-        final var incoming = classNodeRepository.findAllIncomingNeighbours(ids);
+        // TODO : Check if it works for ids : 11, 7, 3 ,1
+        final var incoming = classNodeNeo4jDriverRepository.findAllIncomingNeighbours(ids);
         final var outgoing = classNodeNeo4jDriverRepository.findAllOutgoingNeighbours(ids);
 
         final var groupedIncoming = incoming.stream().collect(Collectors.groupingBy(ClassNodeVo::getSource));
@@ -79,6 +80,19 @@ public class ClassNodeServiceImpl implements ClassNodeService
     }
 
     @Override
+    public List<ClassNode> findByPropertiesAndLabels(final long projectId, final List<String> labels, final List<FilterCondition> filters)
+    {
+        final var project = projectService.findById(projectId)
+            .orElseThrow(() -> new IllegalStateException("Project id: %s does not exist".formatted(projectId)));
+
+        final var projectTag = projectService.getProjectTag(project);
+
+        final var nodeIds = classNodeNeo4jDriverRepository.findAllNodeIdsByPropertiesAndLabels(labels, filters);
+
+        return findByIds(nodeIds);
+    }
+
+    @Override
     public Optional<ClassNode> findById(final Long id)
     {
         final var notHydratedNode = classNodeRepository.findById(id);
@@ -96,6 +110,22 @@ public class ClassNodeServiceImpl implements ClassNodeService
         final var outgoing = classNodeRepository.findAllOutgoingNeighbours(id);
 
         return Optional.of(classNodeMapper.mapToDomain(notHydratedNode.get(), incoming, outgoing));
+    }
+
+    @Override
+    public List<ClassNode> findNeighboursByUri(final String uri,
+                                               final String projectTag,
+                                               final int maxDistance,
+                                               final List<String> allowedRelationships)
+    {
+        final var sourceNode = classNodeRepository.findByUri(uri);
+
+        if (sourceNode.isEmpty())
+        {
+            return List.of();
+        }
+
+        return findNeighbours(sourceNode.get().getId(), maxDistance, allowedRelationships);
     }
 
     @Override
@@ -239,9 +269,17 @@ public class ClassNodeServiceImpl implements ClassNodeService
     @Override
     public ProjectNodeMetadata findProjectNodeMetaData(final String projectTag)
     {
-        final var propertyKeys = classNodeRepository.findAllPropertyKeys(projectTag);
-        final var relationshipTypes = classNodeRepository.findAllRelationshipTypes(projectTag);
-        final var labels = classNodeRepository.findAllLabels(projectTag);
+        final var propertyKeys = classNodeRepository.findAllPropertyKeys(projectTag).stream()
+            .filter(property -> property.startsWith("http") || property.equals("uri"))
+            .toList();
+
+        final var labels = classNodeRepository.findAllLabels(projectTag).stream()
+            .filter(label -> label.startsWith("http"))
+            .toList();
+
+        final var relationshipTypes = classNodeRepository.findAllRelationshipTypes(projectTag).stream()
+            .filter(relationship -> relationship.startsWith("http"))
+            .toList();
 
         return ProjectNodeMetadata.builder()
             .withPropertyKeys(propertyKeys)
