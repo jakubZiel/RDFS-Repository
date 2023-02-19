@@ -9,7 +9,5 @@ import com.rdfsonto.importonto.database.ImportOntologyResult;
 
 public interface ImportOntologyService
 {
-    DownloadedOntology downloadOntology(URL source, Long userId, Long projectId, RDFFormat rdfFormat);
-
-    ImportOntologyResult importOntology(DownloadedOntology downloadedOntology);
+    ImportOntologyResult importOntology(URL source, RDFFormat rdfFormat, Long userId, Long projectId);
 }

@@ -53,14 +53,14 @@ public class ProjectServiceImpl implements ProjectService
     {
         final var project = ProjectNode.builder()
             .withProjectName(projectName)
+            .withOwner(user)
             .build();
 
         final var saved = projectRepository.save(project);
 
-        projectRepository.addProjectToUser(saved.getId(), user.getId());
 
-        return projectRepository.findProjectByNameAndUserId(projectName, user.getId())
-            .orElseThrow();
+        return projectRepository.findById(saved.getId())
+            .orElseThrow(() -> new IllegalStateException("Could not save a project."));
     }
 
     @Override
@@ -89,6 +89,6 @@ public class ProjectServiceImpl implements ProjectService
 
         final var user = userNode.orElseThrow(() -> new IllegalStateException("Can not get a tag for a non-existing user, id: %s".formatted(ownerId)));
 
-        return "%s@%s".formatted(user.getId(), project.getId());
+        return "%s_%s".formatted(user.getId(), project.getId());
     }
 }

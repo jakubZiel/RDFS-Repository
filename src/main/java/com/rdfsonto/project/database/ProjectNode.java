@@ -1,12 +1,13 @@
 package com.rdfsonto.project.database;
 
-import java.util.Map;
-
-import org.springframework.data.neo4j.core.schema.CompositeProperty;
 import org.springframework.data.neo4j.core.schema.GeneratedValue;
 import org.springframework.data.neo4j.core.schema.Id;
 import org.springframework.data.neo4j.core.schema.Node;
 import org.springframework.data.neo4j.core.schema.Property;
+import org.springframework.data.neo4j.core.schema.Relationship;
+
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.rdfsonto.user.database.UserNode;
 
 import lombok.Builder;
 import lombok.EqualsAndHashCode;
@@ -31,7 +32,7 @@ public class ProjectNode
     @EqualsAndHashCode.Exclude
     private final String projectName;
 
-    @EqualsAndHashCode.Exclude
-    @CompositeProperty(prefix = "namespaces", delimiter = "__")
-    private Map<String, String> namespaces;
+    @JsonIgnore
+    @Relationship(type = "OWNER", direction = Relationship.Direction.INCOMING)
+    private UserNode owner;
 }
