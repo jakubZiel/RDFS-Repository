@@ -1,6 +1,7 @@
 package com.rdfsonto.importonto.rest;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -34,20 +35,20 @@ public class ImportOntologyController
             return ResponseEntity.badRequest().body(ImportOntologyErrorCode.INVALID_REQUEST);
         }
 
-        try
-        {
-            return ResponseEntity.ok(
-                importOntologyService.importOntology(
-                    importOntologyRequest.source(),
-                    rdfFormat,
-                    importOntologyRequest.userId(),
-                    importOntologyRequest.projectId()));
-        }
-        catch (final ImportOntologyException importOntologyException)
-        {
-            log.warn(importOntologyException.getMessage());
-            return ResponseEntity.badRequest().body(importOntologyException.getErrorCode());
-        }
+        return ResponseEntity.ok(
+            importOntologyService.importOntology(
+                importOntologyRequest.source(),
+                rdfFormat,
+                importOntologyRequest.userId(),
+                importOntologyRequest.projectId()));
+
+    }
+
+    @ExceptionHandler(ImportOntologyException.class)
+    public ResponseEntity<?> handle(final ImportOntologyException importOntologyException)
+    {
+        log.warn(importOntologyException.getMessage());
+        return ResponseEntity.badRequest().body(importOntologyException.getErrorCode());
     }
 
     private boolean isNotValid(final ImportOntologyRequest request)

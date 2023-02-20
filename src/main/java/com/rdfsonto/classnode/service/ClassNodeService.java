@@ -14,15 +14,15 @@ public interface ClassNodeService
 
     Optional<ClassNode> findById(Long id);
 
-    List<ClassNode> findNeighboursByUri(String uri, String projectTag, int maxDistance, List<String> allowedRelationships);
+    List<ClassNode> findNeighboursByUri(String nodeUri, long projectId, int maxDistance, List<String> allowedRelationships);
 
     List<ClassNode> findNeighbours(long id, int maxDistance, List<String> allowedRelationships);
 
-    Optional<ClassNode> save(ClassNode node);
+    ClassNode save(ClassNode node, long projectId);
 
-    Optional<ClassNode> update(ClassNode node);
+    ClassNode update(ClassNode node);
 
-    boolean deleteById(long id);
+    void deleteById(long id);
 
-    ProjectNodeMetadata findProjectNodeMetaData(String projectTag);
+    ProjectNodeMetadata findProjectNodeMetaData(long projectId);
 }

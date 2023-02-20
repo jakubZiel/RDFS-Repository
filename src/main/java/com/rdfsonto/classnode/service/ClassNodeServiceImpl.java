@@ -1,5 +1,10 @@
 package com.rdfsonto.classnode.service;
 
+import static com.rdfsonto.classnode.service.ClassNodeExceptionErrorCode.INVALID_MAX_DISTANCE;
+import static com.rdfsonto.classnode.service.ClassNodeExceptionErrorCode.INVALID_NODE_ID;
+import static com.rdfsonto.classnode.service.ClassNodeExceptionErrorCode.INVALID_NODE_URI;
+import static com.rdfsonto.classnode.service.ClassNodeExceptionErrorCode.INVALID_PROJECT_ID;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -83,8 +88,11 @@ public class ClassNodeServiceImpl implements ClassNodeService
     public List<ClassNode> findByPropertiesAndLabels(final long projectId, final List<String> labels, final List<FilterCondition> filters)
     {
         final var project = projectService.findById(projectId)
-            .orElseThrow(() -> new IllegalStateException("Project id: %s does not exist".formatted(projectId)));
+            .orElseThrow(() -> new ClassNodeException(
+                "Project with ID: %s does not exist, can not filter nodes.".formatted(projectId),
+                INVALID_PROJECT_ID));
 
+        // TODO apply filter for projectTags
         final var projectTag = projectService.getProjectTag(project);
 
         final var nodeIds = classNodeNeo4jDriverRepository.findAllNodeIdsByPropertiesAndLabels(labels, filters);
@@ -113,24 +121,36 @@ public class ClassNodeServiceImpl implements ClassNodeService
     }
 
     @Override
-    public List<ClassNode> findNeighboursByUri(final String uri,
-                                               final String projectTag,
+    public List<ClassNode> findNeighboursByUri(final String nodeUri,
+                                               final long projectId,
                                                final int maxDistance,
                                                final List<String> allowedRelationships)
     {
-        final var sourceNode = classNodeRepository.findByUri(uri);
+        projectService.findById(projectId)
+            .orElseThrow(() ->
+                new ClassNodeException(
+                    "Project with ID: %s does not exist, can't look for uri: %s nodeUri".formatted(projectId, nodeUri),
+                    INVALID_PROJECT_ID));
 
-        if (sourceNode.isEmpty())
-        {
-            return List.of();
-        }
+        final var sourceNode = classNodeRepository.findByUri(nodeUri).orElseThrow(() ->
+            new ClassNodeException(
+                "Node with URI: %s does not exist in project with ID: %s".formatted(nodeUri, projectId),
+                INVALID_NODE_URI));
 
-        return findNeighbours(sourceNode.get().getId(), maxDistance, allowedRelationships);
+        return findNeighbours(sourceNode.getId(), maxDistance, allowedRelationships);
     }
 
     @Override
     public List<ClassNode> findNeighbours(final long id, final int maxDistance, final List<String> allowedRelationships)
     {
+        classNodeRepository.findById(id)
+            .orElseThrow(() -> new ClassNodeException("Tried to get neighbours of non existing node with ID: %s".formatted(id), INVALID_NODE_ID));
+
+        if (maxDistance < 0)
+        {
+            throw new ClassNodeException("Invalid max distance: %d".formatted(maxDistance), INVALID_MAX_DISTANCE);
+        }
+
         final var numberOfNeighbours = classNodeRepository.countAllNeighbours(maxDistance, id);
 
         if (numberOfNeighbours > MAX_NUMBER_OF_NEIGHBOURS)
@@ -148,8 +168,13 @@ public class ClassNodeServiceImpl implements ClassNodeService
 
     // TODO take care of more types of relationship coming from the same node - TEST IT!!!
     @Override
-    public Optional<ClassNode> save(final ClassNode node)
+    public ClassNode save(final ClassNode node, final long projectId)
     {
+        projectService.findById(projectId)
+            .orElseThrow(() ->
+                new ClassNodeException("Can not save class node in non-existing project with ID: %s".formatted(projectId),
+                    INVALID_PROJECT_ID));
+
         final var nodeVo = classNodeVoMapper.mapToVo(node);
 
         final var savedVo = classNodeRepository.save(nodeVo);
@@ -200,23 +225,18 @@ public class ClassNodeServiceImpl implements ClassNodeService
         classNodeRepository.saveAll(outgoing);
         classNodeRepository.save(savedVo);
 
-        return findById(savedVo.getId());
+        return findById(savedVo.getId())
+            .orElseThrow(() -> new IllegalStateException("Class node with ID: %s is not found after after being saved.".formatted(savedVo.getId())));
     }
 
     @Override
-    public Optional<ClassNode> update(final ClassNode node)
+    public ClassNode update(final ClassNode node)
     {
-        final var original = classNodeRepository.findById(node.id());
-
-        if (original.isEmpty())
-        {
-            return Optional.empty();
-        }
+        final var originalNode = classNodeRepository.findById(node.id())
+            .orElseThrow(() -> new ClassNodeException("Class node with ID: %s does not exist.".formatted(node.id()), INVALID_NODE_ID));
 
         final var outgoing = classNodeRepository.findAllById(node.outgoingNeighbours().keySet());
         final var incoming = classNodeRepository.findAllById(node.incomingNeighbours().keySet());
-
-        final var originalNode = original.get();
 
         if (originalNode.getNeighbours() == null)
         {
@@ -256,19 +276,29 @@ public class ClassNodeServiceImpl implements ClassNodeService
         classNodeRepository.saveAll(outgoing);
         classNodeRepository.save(originalNode);
 
-        return findById(node.id());
+        return findById(node.id())
+            .orElseThrow(() -> new IllegalStateException("Class node with ID: %s is not found after after being saved.".formatted(node.id())));
     }
 
     @Override
-    public boolean deleteById(final long id)
+    public void deleteById(final long id)
     {
+        classNodeRepository.findById(id)
+            .orElseThrow(() ->
+                new ClassNodeException("Class node with ID: %s can not be deleted, because it doesn not exist.".formatted(id),
+                    INVALID_NODE_ID));
+
         classNodeRepository.deleteById(id);
-        return !classNodeRepository.existsById(id);
     }
 
     @Override
-    public ProjectNodeMetadata findProjectNodeMetaData(final String projectTag)
+    public ProjectNodeMetadata findProjectNodeMetaData(final long projectId)
     {
+        final var project = projectService.findById(projectId)
+            .orElseThrow(() -> new ClassNodeException("Not mete data for non existing project with ID: %s".formatted(projectId), INVALID_PROJECT_ID));
+
+        final var projectTag = projectService.getProjectTag(project);
+
         final var propertyKeys = classNodeRepository.findAllPropertyKeys(projectTag).stream()
             .filter(property -> property.startsWith("http") || property.equals("uri"))
             .toList();

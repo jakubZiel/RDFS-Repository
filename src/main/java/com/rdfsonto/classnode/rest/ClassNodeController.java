@@ -1,9 +1,11 @@
 package com.rdfsonto.classnode.rest;
 
+import java.util.Collections;
 import java.util.List;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -13,10 +15,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.rdfsonto.classnode.database.ClassNodeRepository;
 import com.rdfsonto.classnode.service.ClassNode;
+import com.rdfsonto.classnode.service.ClassNodeException;
+import com.rdfsonto.classnode.service.ClassNodeExceptionErrorCode;
 import com.rdfsonto.classnode.service.ClassNodeService;
-import com.rdfsonto.project.service.ProjectService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,8 +30,6 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/neo4j/class")
 public class ClassNodeController
 {
-    private final ProjectService projectService;
-    private final ClassNodeRepository classNodeRepository;
     private final ClassNodeService classNodeService;
     private final NodeChangeEventHandler nodeChangeEventHandler;
 
@@ -37,40 +37,24 @@ public class ClassNodeController
     ResponseEntity<?> getClassNodeById(@PathVariable final long id)
     {
         final var node = classNodeService.findById(id);
-
-        if (node.isEmpty())
-        {
-            log.info("Node id: {} does not exist", id);
-            return ResponseEntity.notFound().build();
-        }
-
-        return ResponseEntity.ok(node.get());
+        return node.isPresent() ? ResponseEntity.of(node) : ResponseEntity.notFound().build();
     }
 
     @PostMapping("/ids")
     ResponseEntity<?> getClassNodesById(@RequestBody final List<Long> nodeIds)
     {
-        if (nodeIds.isEmpty())
+        if (nodeIds == null || nodeIds.isEmpty())
         {
-            return ResponseEntity.badRequest().body("invalid_body_empty_ids");
+            return ResponseEntity.ok(Collections.emptyList());
         }
 
-        final var nodes = classNodeService.findByIds(nodeIds);
-
-        return ResponseEntity.ok(nodes);
+        return ResponseEntity.ok(classNodeService.findByIds(nodeIds));
     }
 
     @GetMapping("/neighbours/{id}")
-    ResponseEntity<?> getClassNodeNeighbours(@PathVariable final long id,
-                                             @RequestParam final int maxDistance)
+    ResponseEntity<?> getClassNodeNeighbours(@PathVariable final long id, @RequestParam final int maxDistance)
     {
-        if (!classNodeRepository.existsById(id))
-        {
-            return ResponseEntity.notFound().build();
-        }
-
         final var neighbours = classNodeService.findNeighbours(id, maxDistance, List.of());
-
         return ResponseEntity.ok(neighbours);
     }
 
@@ -79,144 +63,65 @@ public class ClassNodeController
                                                   @RequestParam final int maxDistance,
                                                   @RequestParam final long projectId)
     {
-        final var project = projectService.findById(projectId);
-
-        if (project.isEmpty())
-        {
-            log.info("Project id: {} does not exist", projectId);
-            return ResponseEntity.badRequest().body("invalid_project");
-        }
-
-        final var projectTag = projectService.getProjectTag(project.get());
-
-        final var neighbours = classNodeService.findNeighboursByUri(uri, projectTag, maxDistance, List.of());
-
+        final var neighbours = classNodeService.findNeighboursByUri(uri, projectId, maxDistance, List.of());
         return ResponseEntity.ok(neighbours);
     }
 
     @PostMapping
     ResponseEntity<?> createNode(@RequestBody final ClassNode node, final long projectId)
     {
-        final var project = projectService.findById(projectId);
-
-        if (project.isEmpty())
-        {
-            log.info("Project id: {} does not exist", projectId);
-            return ResponseEntity.badRequest().body("invalid_project");
-        }
-
-        final var savedNode = classNodeService.save(node);
-
-        if (savedNode.isEmpty())
-        {
-            log.info("Failed to save node : {}", node);
-            return ResponseEntity.internalServerError().body("failed_node_save");
-        }
-
-        return ResponseEntity.ok(savedNode.get());
+        return ResponseEntity.ok(classNodeService.save(node, projectId));
     }
 
     @PutMapping
     ResponseEntity<?> updateNode(@RequestBody final ClassNode nodeUpdate)
     {
-        final var originalNode = classNodeService.findById(nodeUpdate.id());
-
-        if (originalNode.isEmpty())
-        {
-            log.info("Node of id ");
-            return ResponseEntity.notFound().build();
-        }
-
-        final var updatedNode = classNodeService.update(nodeUpdate);
-
-        if (updatedNode.isEmpty())
-        {
-            log.info("Failed to update node:  {}", nodeUpdate);
-            return ResponseEntity.internalServerError().body("failed_node_update");
-        }
-
-        return ResponseEntity.ok(updatedNode);
+        return ResponseEntity.ok(classNodeService.update(nodeUpdate));
     }
 
     @DeleteMapping("/{id}")
     ResponseEntity<?> deleteNode(@PathVariable final long id)
     {
-        if (!classNodeRepository.existsById(id))
-        {
-            log.info("Class node id: {} can not be deleted, because it does not exist", id);
-            return ResponseEntity.notFound().build();
-        }
-
-        final var deleted = classNodeService.deleteById(id);
-
-        if (deleted)
-        {
-            return ResponseEntity.noContent().build();
-        }
-        else
-        {
-            log.warn("Failed to delete node id {}, node has been already deleted", id);
-            return ResponseEntity.internalServerError().body("error_delete_non_existing_node");
-        }
+        classNodeService.deleteById(id);
+        return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/multiple")
     ResponseEntity<?> multipleNodeUpdates(@RequestBody List<NodeChangeEvent> events)
     {
-        if (events == null)
+        if (events == null || events.isEmpty())
         {
-            return ResponseEntity.badRequest().body("null_events");
+            return ResponseEntity.badRequest().body(ClassNodeExceptionErrorCode.EMPTY_REQUEST);
         }
-
-        final var responses = nodeChangeEventHandler.handleEvents(events);
-
-        final var failedRequests = responses.stream()
-            .filter(NodeChangeEventResponse::failed)
-            .toList();
-
-        if (failedRequests.isEmpty())
-        {
-            return ResponseEntity.ok(responses);
-        }
-
-        log.error("Failed requests: {}", failedRequests);
-        return ResponseEntity.internalServerError().body(responses);
+        return ResponseEntity.ok(nodeChangeEventHandler.handleEvents(events));
     }
 
     @GetMapping("/metadata")
     ResponseEntity<?> getProjectNodeMetaData(@RequestParam final long projectId)
     {
-        final var project = projectService.findById(projectId);
-
-        if (project.isEmpty())
-        {
-            return ResponseEntity.notFound().build();
-        }
-
-        final var projectTag = projectService.getProjectTag(project.get());
-
-        return ResponseEntity.ok(classNodeService.findProjectNodeMetaData(projectTag));
+        return ResponseEntity.ok(classNodeService.findProjectNodeMetaData(projectId));
     }
 
     @PostMapping("/filter")
     ResponseEntity<?> getNodesFiltered(@RequestBody final FilterPropertyRequest request)
     {
-        final var project = projectService.findById(request.projectId());
-
-        if (project.isEmpty())
-        {
-            log.warn("Can not find nodes by 'property' in project id: {}, because project does not exist", request.projectId());
-            return ResponseEntity.badRequest().body("invalid_project_id");
-        }
-
-        final var nodes = classNodeService.findByPropertiesAndLabels(request.projectId(), request.labels(), request.filterConditions());
-
-        return ResponseEntity.ok(nodes);
+        return ResponseEntity.ok(
+            classNodeService.findByPropertiesAndLabels(
+                request.projectId(),
+                request.labels(),
+                request.filterConditions()));
     }
 
     @GetMapping("/all/{user}/{project}")
     ResponseEntity<List<?>> getAllClassNodesInProject(@PathVariable String user, @PathVariable String project)
     {
         return ResponseEntity.ok(null);
+    }
+
+    @ExceptionHandler({ClassNodeException.class})
+    public ResponseEntity<?> handle(final ClassNodeException classNodeException)
+    {
+        log.warn(classNodeException.getMessage());
+        return ResponseEntity.badRequest().body(classNodeException.getErrorCode());
     }
 }
