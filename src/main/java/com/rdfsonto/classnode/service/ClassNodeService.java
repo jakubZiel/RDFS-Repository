@@ -20,8 +20,6 @@ public interface ClassNodeService
 
     ClassNode save(ClassNode node, long projectId);
 
-    ClassNode update(ClassNode node);
-
     void deleteById(long id);
 
     ProjectNodeMetadata findProjectNodeMetaData(long projectId);

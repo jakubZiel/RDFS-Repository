@@ -2,6 +2,7 @@ package com.rdfsonto.classnode.rest;
 
 import java.util.List;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.springframework.stereotype.Component;
 
 import com.rdfsonto.classnode.service.ClassNodeService;
@@ -17,14 +18,14 @@ public class NodeChangeEventHandler
 {
     private final ClassNodeService classNodeService;
 
-    public List<NodeChangeEventResponse> handleEvents(List<NodeChangeEvent> events)
+    public List<NodeChangeEventResponse> handleEvents(List<NodeChangeEvent> events, final Long projectId)
     {
         return events.stream().map(event -> {
             switch (event.type())
             {
                 case CREATE ->
                 {
-                    return handleCreate(event);
+                    return handleCreate(event, projectId);
                 }
                 case DELETE ->
                 {
@@ -45,38 +46,39 @@ public class NodeChangeEventHandler
 
     private NodeChangeEventResponse handleDelete(final NodeChangeEvent deleteEvent)
     {
-        final var deleted = classNodeService.deleteById(deleteEvent.nodeId());
+        classNodeService.deleteById(deleteEvent.nodeId());
+        final var isDeleted = classNodeService.findById(deleteEvent.nodeId()).isEmpty();
 
         return NodeChangeEventResponse.builder()
             .withEvent(deleteEvent)
-            .withFailed(!deleted)
+            .withFailed(isDeleted)
             .build();
     }
 
-    private NodeChangeEventResponse handleCreate(final NodeChangeEvent createEvent)
+    private NodeChangeEventResponse handleCreate(final NodeChangeEvent createEvent, final Long projectId)
     {
-        final var savedNode = classNodeService.save(createEvent.body());
+        final var savedNode = classNodeService.save(createEvent.body(), projectId);
 
         final var responseBuilder = NodeChangeEventResponse.builder()
             .withEvent(createEvent)
-            .withFailed(savedNode.isEmpty());
-
-        savedNode.ifPresent(responseBuilder::withBody);
+            .withBody(savedNode)
+            .withFailed(false);
 
         return responseBuilder.build();
     }
 
     private NodeChangeEventResponse handleUpdate(final NodeChangeEvent updateEvent)
     {
-        final var updatedNode = classNodeService.update(updateEvent.body());
+        throw new NotImplementedException();
+
+       /* final var updatedNode = classNodeService.save(updateEvent.body(), 0);
 
         final var responseBuilder = NodeChangeEventResponse.builder()
             .withEvent(updateEvent)
-            .withFailed(updatedNode.isEmpty());
+            .withBody(updatedNode)
+            .withFailed(false);
 
-        updatedNode.ifPresent(responseBuilder::withBody);
-
-        return responseBuilder.build();
+        return responseBuilder.build();*/
     }
 
     private NodeChangeEventResponse failedEvent(final NodeChangeEvent changeEvent)

@@ -19,6 +19,7 @@ import com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepository;
 import com.rdfsonto.classnode.database.ClassNodeRepository;
 import com.rdfsonto.classnode.database.ClassNodeVo;
 import com.rdfsonto.classnode.database.ClassNodeVoMapper;
+import com.rdfsonto.project.database.ProjectNode;
 import com.rdfsonto.project.service.ProjectService;
 
 import lombok.RequiredArgsConstructor;
@@ -37,6 +38,7 @@ public class ClassNodeServiceImpl implements ClassNodeService
     private final ClassNodeMapper classNodeMapper;
     private final ClassNodeVoMapper classNodeVoMapper;
     private final ProjectService projectService;
+    private final UriUniquenessHandler uriHandler;
 
     @Override
     public List<ClassNode> findByIds(final List<Long> ids)
@@ -66,7 +68,8 @@ public class ClassNodeServiceImpl implements ClassNodeService
                 classNodeMapper.mapToDomain(node,
                     groupedIncoming.get(node.getId()),
                     groupedOutgoing.get(node.getId())))
-            .collect(Collectors.toList());
+            .map(uriHandler::removeUniqueness)
+            .toList();
     }
 
     @Override
@@ -117,7 +120,8 @@ public class ClassNodeServiceImpl implements ClassNodeService
         final var incoming = classNodeRepository.findAllIncomingNeighbours(id);
         final var outgoing = classNodeRepository.findAllOutgoingNeighbours(id);
 
-        return Optional.of(classNodeMapper.mapToDomain(notHydratedNode.get(), incoming, outgoing));
+        return Optional.of(classNodeMapper.mapToDomain(notHydratedNode.get(), incoming, outgoing))
+            .map(uriHandler::removeUniqueness);
     }
 
     @Override
@@ -170,22 +174,29 @@ public class ClassNodeServiceImpl implements ClassNodeService
     @Override
     public ClassNode save(final ClassNode node, final long projectId)
     {
-        projectService.findById(projectId)
+        final var project = projectService.findById(projectId)
             .orElseThrow(() ->
                 new ClassNodeException("Can not save class node in non-existing project with ID: %s".formatted(projectId),
                     INVALID_PROJECT_ID));
 
-        final var nodeVo = classNodeVoMapper.mapToVo(node);
+        if (classNodeRepository.findById(node.id()).isPresent())
+        {
+            return update(node, project);
+        }
+
+        final var uniqueNode = uriHandler.applyUniqueness(node, projectService.getProjectTag(project));
+
+        final var nodeVo = classNodeVoMapper.mapToVo(uniqueNode);
 
         final var savedVo = classNodeRepository.save(nodeVo);
 
-        final var outgoing = classNodeRepository.findAllById(node.outgoingNeighbours().keySet());
-        final var incoming = classNodeRepository.findAllById(node.incomingNeighbours().keySet());
+        final var outgoing = classNodeRepository.findAllById(uniqueNode.outgoingNeighbours().keySet());
+        final var incoming = classNodeRepository.findAllById(uniqueNode.incomingNeighbours().keySet());
 
         savedVo.setNeighbours(new HashMap<>());
 
-        node.incomingNeighbours().keySet().forEach(neighbour -> {
-            final var relationships = node.incomingNeighbours().get(neighbour);
+        uniqueNode.incomingNeighbours().keySet().forEach(neighbour -> {
+            final var relationships = uniqueNode.incomingNeighbours().get(neighbour);
 
             relationships.forEach(relationship -> {
                 final var neighboursByRelationship = savedVo.getNeighbours().get(relationship);
@@ -209,8 +220,8 @@ public class ClassNodeServiceImpl implements ClassNodeService
             });
         });
 
-        node.outgoingNeighbours().keySet().forEach(neighbour -> {
-            final var relationships = node.outgoingNeighbours().get(neighbour);
+        uniqueNode.outgoingNeighbours().keySet().forEach(neighbour -> {
+            final var relationships = uniqueNode.outgoingNeighbours().get(neighbour);
 
             relationships.forEach(relationship -> {
                 final var destinationNode = outgoing.stream()
@@ -229,14 +240,15 @@ public class ClassNodeServiceImpl implements ClassNodeService
             .orElseThrow(() -> new IllegalStateException("Class node with ID: %s is not found after after being saved.".formatted(savedVo.getId())));
     }
 
-    @Override
-    public ClassNode update(final ClassNode node)
+    private ClassNode update(final ClassNode node, final ProjectNode project)
     {
-        final var originalNode = classNodeRepository.findById(node.id())
-            .orElseThrow(() -> new ClassNodeException("Class node with ID: %s does not exist.".formatted(node.id()), INVALID_NODE_ID));
+        final var uniqueNode = uriHandler.applyUniqueness(node, projectService.getProjectTag(project));
 
-        final var outgoing = classNodeRepository.findAllById(node.outgoingNeighbours().keySet());
-        final var incoming = classNodeRepository.findAllById(node.incomingNeighbours().keySet());
+        final var originalNode = classNodeRepository.findById(uniqueNode.id())
+            .orElseThrow(() -> new ClassNodeException("Class node with ID: %s does not exist.".formatted(uniqueNode.id()), INVALID_NODE_ID));
+
+        final var outgoing = classNodeRepository.findAllById(uniqueNode.outgoingNeighbours().keySet());
+        final var incoming = classNodeRepository.findAllById(uniqueNode.incomingNeighbours().keySet());
 
         if (originalNode.getNeighbours() == null)
         {
@@ -246,7 +258,7 @@ public class ClassNodeServiceImpl implements ClassNodeService
         final var incomingNeighbours = originalNode.getNeighbours();
 
         incoming.forEach(neighbour -> {
-            final var relationships = node.incomingNeighbours().get(neighbour.getId());
+            final var relationships = uniqueNode.incomingNeighbours().get(neighbour.getId());
 
             relationships.forEach(relationship -> {
                 if (incomingNeighbours.containsKey(relationship))
@@ -269,15 +281,15 @@ public class ClassNodeServiceImpl implements ClassNodeService
         });
 
         outgoing.forEach(neighbour -> {
-            final var relationships = node.outgoingNeighbours().get(neighbour.getId());
+            final var relationships = uniqueNode.outgoingNeighbours().get(neighbour.getId());
             relationships.forEach(relationship -> connectOutgoing(originalNode, neighbour, relationship));
         });
 
         classNodeRepository.saveAll(outgoing);
         classNodeRepository.save(originalNode);
 
-        return findById(node.id())
-            .orElseThrow(() -> new IllegalStateException("Class node with ID: %s is not found after after being saved.".formatted(node.id())));
+        return findById(uniqueNode.id())
+            .orElseThrow(() -> new IllegalStateException("Class node with ID: %s is not found after after being saved.".formatted(uniqueNode.id())));
     }
 
     @Override

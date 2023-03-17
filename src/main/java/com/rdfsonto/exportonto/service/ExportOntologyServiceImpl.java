@@ -11,6 +11,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import com.rdfsonto.classnode.database.ClassNodeRepository;
+import com.rdfsonto.classnode.service.UniqueUriIdHandler;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,11 +29,13 @@ class ExportOntologyServiceImpl implements ExportOntologyService
     private String WORKSPACE_DIR;
     private final ClassNodeRepository classNodeRepository;
     private final Neo4jRDFClient neo4jRDFClient;
+    private final RDFExporter rdfExporter;
+    private final UniqueUriIdHandler uniqueUriIdHandler;
 
     @Override
     public ExtractedOntology extractOntology(final Long userId, final Long projectId, final RDFFormat rdfFormat)
     {
-        final var ontologyTag = ontologyTag(userId, projectId);
+        final var ontologyTag = uniqueUriIdHandler.uniqueUri(userId, projectId);
         final var projectLabel = PROJECT_LABEL_ROOT + ontologyTag;
         final var projectNodesCount = classNodeRepository.countAllByClassLabelsContaining(projectLabel);
 
@@ -60,8 +63,7 @@ class ExportOntologyServiceImpl implements ExportOntologyService
     @Override
     public ExportOntologyResult exportOntology(final Long userId, final Long projectId, final ExtractedOntology extractedOntology)
     {
-        final var ontologyTag = ontologyTag(userId, projectId);
-        final var rdfExporter = new RDFExporter();
+        final var ontologyTag = uniqueUriIdHandler.uniqueUri(userId, projectId);
 
         try
         {
@@ -100,10 +102,5 @@ class ExportOntologyServiceImpl implements ExportOntologyService
             log.error("Failed to save to file: {}", filePath);
             return null;
         }
-    }
-
-    private String ontologyTag(final Long userId, final Long projectId)
-    {
-        return userId.toString() + projectId.toString();
     }
 }

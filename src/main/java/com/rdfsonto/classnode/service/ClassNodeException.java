@@ -8,11 +8,6 @@ import lombok.Getter;
 @Builder(setterPrefix = "with")
 public class ClassNodeException extends RuntimeException
 {
+    private final String message;
     private final ClassNodeExceptionErrorCode errorCode;
-
-    public ClassNodeException(final String message, final ClassNodeExceptionErrorCode errorCode)
-    {
-        super(message);
-        this.errorCode = errorCode;
-    }
 }

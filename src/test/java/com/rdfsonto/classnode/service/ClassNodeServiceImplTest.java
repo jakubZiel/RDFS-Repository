@@ -41,7 +41,8 @@ class ClassNodeServiceImplTest
             classNodeNeo4jDriverRepository,
             classNodeMapper,
             classNodeVoMapper,
-            projectService);
+            projectService,
+            new UriUniquenessHandler(projectService, new UniqueUriIdHandler()));
 
         when(classNodeRepository.findAllById(any())).thenReturn(List.of(
             ClassNodeVo.builder().withId(1L).withUri("node-1").build(),
@@ -139,10 +140,10 @@ class ClassNodeServiceImplTest
         when(classNodeRepository.findAllById(List.of(2L, 3L))).thenReturn(null);
 
         // when
-        final var saved = classNodeService.save(toSave);
+        final var saved = classNodeService.save(toSave, 1L);
 
         // then
-        softly.assertThat(saved).isNotEmpty();
+        softly.assertThat(saved).isNotNull();
     }
 
     @Test
@@ -151,9 +152,9 @@ class ClassNodeServiceImplTest
         final var toUpdate = ClassNode.builder().build();
 
         // when
-        final var updated = classNodeService.save(toUpdate);
+        final var updated = classNodeService.save(toUpdate, 1L);
 
         // then
-        softly.assertThat(updated).isNotEmpty();
+        softly.assertThat(updated).isNotNull();
     }
 }

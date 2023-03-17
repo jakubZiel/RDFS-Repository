@@ -17,11 +17,13 @@ import org.eclipse.rdf4j.model.util.Values;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.Rio;
+import org.springframework.stereotype.Component;
 
 import com.rdfsonto.rdf4j.KnownPrefix;
 import com.rdfsonto.rdf4j.RDFInputOutput;
 
 
+@Component
 public class RDFExporter extends RDFInputOutput
 {
     public void prepareRDFFileForExport(final Path inputFile, final String tag, final RDFFormat rdfFormat) throws IOException
@@ -47,7 +49,7 @@ public class RDFExporter extends RDFInputOutput
             {
                 outModel.setNamespace(
                     namespace.getPrefix(),
-                    namespace.getName().substring(0, namespace.getName().lastIndexOf("_" + tag + "#")) + "#"
+                    namespace.getName().substring(0, namespace.getName().lastIndexOf(tag + "#")) + "#"
                 );
             }
         });
@@ -102,7 +104,7 @@ public class RDFExporter extends RDFInputOutput
     {
         if (!knownNamespaces.contains(subject.getNamespace()))
         {
-            final var index = subject.getNamespace().lastIndexOf("_" + tag);
+            final var index = subject.getNamespace().lastIndexOf(tag);
             final var untaggedSub = subject.getNamespace().substring(0, index);
             return Values.iri(untaggedSub + "#", subject.getLocalName());
         }
@@ -114,7 +116,7 @@ public class RDFExporter extends RDFInputOutput
     {
         if (!knownNamespaces.contains(predicate.getNamespace()))
         {
-            final var index = predicate.getNamespace().lastIndexOf("_" + tag);
+            final var index = predicate.getNamespace().lastIndexOf(tag);
             String untaggedPred = predicate.getNamespace().substring(0, index);
             return Values.iri(untaggedPred + "#", predicate.getLocalName());
         }
@@ -132,7 +134,7 @@ public class RDFExporter extends RDFInputOutput
 
         if (!knownNamespaces.contains(iriObject.getNamespace()))
         {
-            final var index = iriObject.getNamespace().lastIndexOf("_" + tag);
+            final var index = iriObject.getNamespace().lastIndexOf(tag);
             final var untaggedObject = iriObject.getNamespace().substring(0, index);
             return Values.iri(untaggedObject + "#", iriObject.getLocalName());
         }
@@ -144,8 +146,8 @@ public class RDFExporter extends RDFInputOutput
         RDFExporter e = new RDFExporter();
 
         e.prepareRDFFileForExport(
-            Paths.get("/media/jzielins/SD/sem7/PD2/rdfs-onto/src/main/resources/rdfs/movie2-out.owl"),
-            "projekt_123",
+            Paths.get("/home/jzielins/Projects/ontology-editor-backend/src/main/resources/rdfs/vw2.owl"),
+            "@123@123@",
             RDFFormat.TURTLE
         );
     }

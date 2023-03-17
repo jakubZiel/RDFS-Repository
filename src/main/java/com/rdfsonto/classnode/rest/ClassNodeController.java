@@ -5,7 +5,6 @@ import java.util.List;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
-import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -16,7 +15,6 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.rdfsonto.classnode.service.ClassNode;
-import com.rdfsonto.classnode.service.ClassNodeException;
 import com.rdfsonto.classnode.service.ClassNodeExceptionErrorCode;
 import com.rdfsonto.classnode.service.ClassNodeService;
 
@@ -74,9 +72,9 @@ public class ClassNodeController
     }
 
     @PutMapping
-    ResponseEntity<?> updateNode(@RequestBody final ClassNode nodeUpdate)
+    ResponseEntity<?> updateNode(@RequestBody final ClassNode nodeUpdate, final long projectId)
     {
-        return ResponseEntity.ok(classNodeService.update(nodeUpdate));
+        return ResponseEntity.ok(classNodeService.save(nodeUpdate, projectId));
     }
 
     @DeleteMapping("/{id}")
@@ -87,13 +85,13 @@ public class ClassNodeController
     }
 
     @PutMapping("/multiple")
-    ResponseEntity<?> multipleNodeUpdates(@RequestBody List<NodeChangeEvent> events)
+    ResponseEntity<?> multipleNodeUpdates(@RequestBody List<NodeChangeEvent> events, @RequestParam final long projectId)
     {
         if (events == null || events.isEmpty())
         {
             return ResponseEntity.badRequest().body(ClassNodeExceptionErrorCode.EMPTY_REQUEST);
         }
-        return ResponseEntity.ok(nodeChangeEventHandler.handleEvents(events));
+        return ResponseEntity.ok(nodeChangeEventHandler.handleEvents(events, projectId));
     }
 
     @GetMapping("/metadata")
@@ -110,18 +108,5 @@ public class ClassNodeController
                 request.projectId(),
                 request.labels(),
                 request.filterConditions()));
-    }
-
-    @GetMapping("/all/{user}/{project}")
-    ResponseEntity<List<?>> getAllClassNodesInProject(@PathVariable String user, @PathVariable String project)
-    {
-        return ResponseEntity.ok(null);
-    }
-
-    @ExceptionHandler({ClassNodeException.class})
-    public ResponseEntity<?> handle(final ClassNodeException classNodeException)
-    {
-        log.warn(classNodeException.getMessage());
-        return ResponseEntity.badRequest().body(classNodeException.getErrorCode());
     }
 }

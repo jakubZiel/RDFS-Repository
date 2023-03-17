@@ -63,7 +63,7 @@ public class RDFImporter extends RDFInputOutput
             {
                 outModel.setNamespace(
                     namespace.getPrefix(),
-                    namespace.getName().replaceAll("#", "_" + tag + "#")
+                    namespace.getName().replaceAll("#", tag + "#")
                 );
             }
         });
@@ -112,14 +112,14 @@ public class RDFImporter extends RDFInputOutput
     protected IRI handleSubject(final IRI subject, final String tag)
     {
         return knownNamespaces.contains(subject.getNamespace()) ? subject :
-            Values.iri(subject.getNamespace().replaceAll("#", "_" + tag + "#"), subject.getLocalName());
+            Values.iri(subject.getNamespace().replaceAll("#", tag + "#"), subject.getLocalName());
     }
 
     @Override
     protected IRI handlePredicate(final IRI predicate, final String tag)
     {
         return knownNamespaces.contains(predicate.getNamespace()) ? predicate :
-            Values.iri(predicate.getNamespace().replaceAll("#", "_" + tag + "#"), predicate.getLocalName());
+            Values.iri(predicate.getNamespace().replaceAll("#", tag + "#"), predicate.getLocalName());
     }
 
     @Override
@@ -127,7 +127,7 @@ public class RDFImporter extends RDFInputOutput
     {
         return object.isLiteral() ? object :
             knownNamespaces.contains(((IRI) object).getNamespace()) ? object :
-                Values.iri(((IRI) object).getNamespace().replaceAll("#", "_" + tag + "#"), ((IRI) object).getLocalName());
+                Values.iri(((IRI) object).getNamespace().replaceAll("#", tag + "#"), ((IRI) object).getLocalName());
     }
 
     public static void main(String[] args) throws IOException
@@ -137,7 +137,7 @@ public class RDFImporter extends RDFInputOutput
         d.prepareRDFFileToMergeIntoNeo4j(
             new URL("file:/home/jzielins/Projects/ontology-editor-backend/src/main/resources/rdfs/vw.owl"),
             Paths.get("/home/jzielins/Projects/ontology-editor-backend/src/main/resources/rdfs/vw2.owl"),
-            "projekt_123",
+            "@123@123@",
             RDFFormat.TURTLE);
     }
 }

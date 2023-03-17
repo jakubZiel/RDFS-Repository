@@ -5,6 +5,7 @@ import java.util.Optional;
 
 import org.springframework.stereotype.Service;
 
+import com.rdfsonto.classnode.service.UniqueUriIdHandler;
 import com.rdfsonto.infrastructure.security.service.AuthService;
 import com.rdfsonto.project.database.ProjectNode;
 import com.rdfsonto.project.database.ProjectRepository;
@@ -23,6 +24,7 @@ public class ProjectServiceImpl implements ProjectService
     private final AuthService authService;
     private final ProjectRepository projectRepository;
     private final UserService userService;
+    private final UniqueUriIdHandler uniqueUriIdHandler;
 
     @Override
     public Optional<ProjectNode> findById(final long projectId)
@@ -58,7 +60,6 @@ public class ProjectServiceImpl implements ProjectService
 
         final var saved = projectRepository.save(project);
 
-
         return projectRepository.findById(saved.getId())
             .orElseThrow(() -> new IllegalStateException("Could not save a project."));
     }
@@ -87,8 +88,8 @@ public class ProjectServiceImpl implements ProjectService
         final var ownerId = project.getOwnerId();
         final var userNode = userService.findById(ownerId);
 
-        final var user = userNode.orElseThrow(() -> new IllegalStateException("Can not get a tag for a non-existing user, id: %s".formatted(ownerId)));
+        final var user = userNode.orElseThrow(() -> new IllegalStateException("Can't get a tag for a non-existing user, id: %s".formatted(ownerId)));
 
-        return "%s_%s".formatted(user.getId(), project.getId());
+        return uniqueUriIdHandler.uniqueUri(user.getId(), project.getId());
     }
 }
