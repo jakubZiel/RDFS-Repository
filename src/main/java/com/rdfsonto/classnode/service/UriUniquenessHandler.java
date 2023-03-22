@@ -1,8 +1,10 @@
 package com.rdfsonto.classnode.service;
 
-import org.springframework.stereotype.Component;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
-import com.rdfsonto.project.service.ProjectService;
+import org.springframework.stereotype.Component;
 
 import lombok.RequiredArgsConstructor;
 
@@ -11,27 +13,45 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class UriUniquenessHandler
 {
-    private final ProjectService projectService;
+    private static final String URI_KEY = "uri";
+    private static final String USER_NAMESPACE_LABEL_PREFIX = "https://www.user_neo4j";
     private final UniqueUriIdHandler uniqueUriIdHandler;
 
     public ClassNode removeUniqueness(final ClassNode uniqueUriClassNode)
     {
         final var nonUniqueUri = uniqueUriIdHandler.extractUri(uniqueUriClassNode);
+        final var nodeLabels = uniqueUriClassNode.classLabels().stream()
+            .filter(label -> !label.startsWith(USER_NAMESPACE_LABEL_PREFIX))
+            .toList();
+
+        final var properties = Optional.ofNullable(uniqueUriClassNode.properties())
+            .map(props -> props.entrySet().stream()
+                .filter(property -> !property.getKey().equals(URI_KEY))
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)))
+            .orElse(null);
 
         return uniqueUriClassNode.toBuilder()
             .withUri(nonUniqueUri)
+            .withClassLabels(nodeLabels)
+            .withProperties(properties)
             .build();
     }
 
     public ClassNode applyUniqueness(final ClassNode nonUniqueUriClassNode, final String projectTag)
     {
         final var nonUniqueUri = nonUniqueUriClassNode.uri();
-        final var index = nonUniqueUri.lastIndexOf("#");
-        final var uniqueUri = nonUniqueUri.substring(0, index) + projectTag + "#";
+        final var uniqueUri = nonUniqueUri.replace("#", projectTag + "#");
+
+        nonUniqueUriClassNode.classLabels().add(getClassNodeLabel(projectTag));
 
         return nonUniqueUriClassNode.toBuilder()
             .withUri(uniqueUri)
             .build();
+    }
+
+    public String getClassNodeLabel(final String projectTag)
+    {
+        return USER_NAMESPACE_LABEL_PREFIX + "#" + projectTag;
     }
 }
 

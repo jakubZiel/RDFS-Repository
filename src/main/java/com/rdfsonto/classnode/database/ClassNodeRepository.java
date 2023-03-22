@@ -104,5 +104,7 @@ public interface ClassNodeRepository extends Neo4jRepository<ClassNodeVo, Long>
 
     Long countAllByClassLabelsContaining(String projectTag);
 
+    void deleteAllByClassLabels(List<String> classLabels);
+
     Optional<ClassNodeVo> findByUri(String uri);
 }

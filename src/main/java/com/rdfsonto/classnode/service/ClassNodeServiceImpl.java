@@ -5,11 +5,12 @@ import static com.rdfsonto.classnode.service.ClassNodeExceptionErrorCode.INVALID
 import static com.rdfsonto.classnode.service.ClassNodeExceptionErrorCode.INVALID_NODE_URI;
 import static com.rdfsonto.classnode.service.ClassNodeExceptionErrorCode.INVALID_PROJECT_ID;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.commons.lang3.NotImplementedException;
 import org.springframework.stereotype.Component;
@@ -19,7 +20,7 @@ import com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepository;
 import com.rdfsonto.classnode.database.ClassNodeRepository;
 import com.rdfsonto.classnode.database.ClassNodeVo;
 import com.rdfsonto.classnode.database.ClassNodeVoMapper;
-import com.rdfsonto.project.database.ProjectNode;
+import com.rdfsonto.classnode.database.LinkVo;
 import com.rdfsonto.project.service.ProjectService;
 
 import lombok.RequiredArgsConstructor;
@@ -179,117 +180,26 @@ public class ClassNodeServiceImpl implements ClassNodeService
                 new ClassNodeException("Can not save class node in non-existing project with ID: %s".formatted(projectId),
                     INVALID_PROJECT_ID));
 
-        if (classNodeRepository.findById(node.id()).isPresent())
-        {
-            return update(node, project);
-        }
-
         final var uniqueNode = uriHandler.applyUniqueness(node, projectService.getProjectTag(project));
 
         final var nodeVo = classNodeVoMapper.mapToVo(uniqueNode);
-
         final var savedVo = classNodeRepository.save(nodeVo);
 
-        final var outgoing = classNodeRepository.findAllById(uniqueNode.outgoingNeighbours().keySet());
-        final var incoming = classNodeRepository.findAllById(uniqueNode.incomingNeighbours().keySet());
+        final var updatedNode = handleIncoming(uniqueNode, savedVo);
 
-        savedVo.setNeighbours(new HashMap<>());
+        final var oldOutgoingIds = classNodeRepository.findAllOutgoingNeighbours(uniqueNode.id()).stream()
+            .map(ClassNodeVo::getId)
+            .toList();
 
-        uniqueNode.incomingNeighbours().keySet().forEach(neighbour -> {
-            final var relationships = uniqueNode.incomingNeighbours().get(neighbour);
+        final var oldOutgoing = classNodeRepository.findAllById(oldOutgoingIds);
 
-            relationships.forEach(relationship -> {
-                final var neighboursByRelationship = savedVo.getNeighbours().get(relationship);
+        final var updatedOutgoing = handleOutgoing(oldOutgoing, uniqueNode, savedVo);
 
-                if (neighboursByRelationship != null)
-                {
-                    neighboursByRelationship.add(
-                        incoming.stream()
-                            .filter(n -> n.getId().equals(neighbour))
-                            .findFirst()
-                            .orElseThrow());
-                }
-                else
-                {
-                    savedVo.getNeighbours().put(relationship,
-                        new ArrayList<>(List.of(incoming.stream()
-                            .filter(n -> n.getId().equals(neighbour))
-                            .findFirst()
-                            .orElseThrow())));
-                }
-            });
-        });
-
-        uniqueNode.outgoingNeighbours().keySet().forEach(neighbour -> {
-            final var relationships = uniqueNode.outgoingNeighbours().get(neighbour);
-
-            relationships.forEach(relationship -> {
-                final var destinationNode = outgoing.stream()
-                    .filter(n -> n.getId().equals(neighbour))
-                    .findFirst()
-                    .orElseThrow();
-
-                connectOutgoing(savedVo, destinationNode, relationship);
-            });
-        });
-
-        classNodeRepository.saveAll(outgoing);
-        classNodeRepository.save(savedVo);
+        classNodeRepository.saveAll(updatedOutgoing);
+        classNodeRepository.save(updatedNode);
 
         return findById(savedVo.getId())
             .orElseThrow(() -> new IllegalStateException("Class node with ID: %s is not found after after being saved.".formatted(savedVo.getId())));
-    }
-
-    private ClassNode update(final ClassNode node, final ProjectNode project)
-    {
-        final var uniqueNode = uriHandler.applyUniqueness(node, projectService.getProjectTag(project));
-
-        final var originalNode = classNodeRepository.findById(uniqueNode.id())
-            .orElseThrow(() -> new ClassNodeException("Class node with ID: %s does not exist.".formatted(uniqueNode.id()), INVALID_NODE_ID));
-
-        final var outgoing = classNodeRepository.findAllById(uniqueNode.outgoingNeighbours().keySet());
-        final var incoming = classNodeRepository.findAllById(uniqueNode.incomingNeighbours().keySet());
-
-        if (originalNode.getNeighbours() == null)
-        {
-            originalNode.setNeighbours(new HashMap<>());
-        }
-
-        final var incomingNeighbours = originalNode.getNeighbours();
-
-        incoming.forEach(neighbour -> {
-            final var relationships = uniqueNode.incomingNeighbours().get(neighbour.getId());
-
-            relationships.forEach(relationship -> {
-                if (incomingNeighbours.containsKey(relationship))
-                {
-                    final var neighbourByRelationship = incomingNeighbours.get(relationship);
-
-                    final var isNewRelation = neighbourByRelationship.stream()
-                        .noneMatch(n -> n.getId().equals(neighbour.getId()));
-
-                    if (isNewRelation)
-                    {
-                        neighbourByRelationship.add(neighbour);
-                    }
-                }
-                else
-                {
-                    incomingNeighbours.put(relationship, new ArrayList<>(List.of(neighbour)));
-                }
-            });
-        });
-
-        outgoing.forEach(neighbour -> {
-            final var relationships = uniqueNode.outgoingNeighbours().get(neighbour.getId());
-            relationships.forEach(relationship -> connectOutgoing(originalNode, neighbour, relationship));
-        });
-
-        classNodeRepository.saveAll(outgoing);
-        classNodeRepository.save(originalNode);
-
-        return findById(uniqueNode.id())
-            .orElseThrow(() -> new IllegalStateException("Class node with ID: %s is not found after after being saved.".formatted(uniqueNode.id())));
     }
 
     @Override
@@ -297,10 +207,21 @@ public class ClassNodeServiceImpl implements ClassNodeService
     {
         classNodeRepository.findById(id)
             .orElseThrow(() ->
-                new ClassNodeException("Class node with ID: %s can not be deleted, because it doesn not exist.".formatted(id),
+                new ClassNodeException("Class node with ID: %s can not be deleted, because it does not exist.".formatted(id),
                     INVALID_NODE_ID));
-
         classNodeRepository.deleteById(id);
+    }
+
+    @Override
+    public void deleteAll(final long projectId)
+    {
+        final var project = projectService.findById(projectId).orElseThrow();
+        final var projectTag = projectService.getProjectTag(project);
+
+        final var classNodeLabel = uriHandler.getClassNodeLabel(projectTag);
+
+        classNodeRepository.deleteAllByClassLabels(List.of(classNodeLabel));
+        // TODO validate that deleted all class nodes for a project
     }
 
     @Override
@@ -330,22 +251,77 @@ public class ClassNodeServiceImpl implements ClassNodeService
             .build();
     }
 
-    private void connectOutgoing(final ClassNodeVo originalNode, final ClassNodeVo neighbour, final String relationship)
+    private List<ClassNodeVo> handleOutgoing(final List<ClassNodeVo> outgoing, final ClassNode uniqueNode, final ClassNodeVo savedVo)
     {
-        if (neighbour.getNeighbours() == null)
-        {
-            neighbour.setNeighbours(new HashMap<>());
-        }
+        final var originalOutgoingLinks = outgoing.stream()
+            .flatMap(outgoingNeighbour -> outgoingNeighbour.getNeighbours().entrySet().stream()
+                .filter(neighboursByRelationship -> {
+                    final var neighboursList = neighboursByRelationship.getValue();
+                    return neighboursList.stream().anyMatch(neighbour -> neighbour.getId().equals(uniqueNode.id()));
+                })
+                .map(link -> LinkVo.builder()
+                    .withSourceId(uniqueNode.id())
+                    .withDestinationId(outgoingNeighbour.getId())
+                    .withRelationship(link.getKey())
+                    .build()))
+            .toList();
 
-        final var destinationNodeNeighboursByRelationship = neighbour.getNeighbours().get(relationship);
+        final var updateOutgoingLinks = uniqueNode.outgoingNeighbours().entrySet().stream()
+            .flatMap(outgoingNeighbour -> outgoingNeighbour.getValue().stream()
+                .map(relationship -> LinkVo.builder()
+                    .withSourceId(uniqueNode.id())
+                    .withDestinationId(outgoingNeighbour.getKey())
+                    .withRelationship(relationship)
+                    .build()))
+            .toList();
 
-        if (destinationNodeNeighboursByRelationship != null)
-        {
-            destinationNodeNeighboursByRelationship.add(originalNode);
-        }
-        else
-        {
-            neighbour.getNeighbours().put(relationship, new ArrayList<>(List.of((originalNode))));
-        }
+        final var removedLinks = originalOutgoingLinks.stream()
+            .filter(originalLink -> !updateOutgoingLinks.contains(originalLink))
+            .toList();
+
+        final var addedLinks = updateOutgoingLinks.stream()
+            .filter(updateLink -> !originalOutgoingLinks.contains(updateLink))
+            .toList();
+
+        final var addedOutgoingIds = addedLinks.stream()
+            .map(LinkVo::getDestinationId)
+            .toList();
+
+        final var oldOutgoingMap = outgoing.stream()
+            .collect(Collectors.toMap(ClassNodeVo::getId, Function.identity()));
+        final var addedOutgoingMap = classNodeRepository.findAllById(addedOutgoingIds).stream()
+            .collect(Collectors.toMap(ClassNodeVo::getId, Function.identity()));
+
+        final var mergedOutgoing = Stream.concat(oldOutgoingMap.entrySet().stream(), addedOutgoingMap.entrySet().stream())
+            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (v1, v2) -> v1));
+
+        removedLinks.forEach(removedLink -> mergedOutgoing.get(removedLink.getDestinationId()).getNeighbours()
+            .get(removedLink.getRelationship()).removeIf(node -> node.getId().equals(uniqueNode.id())));
+
+        addedLinks.forEach(addedLink -> mergedOutgoing.get(addedLink.getDestinationId()).getNeighbours()
+            .get(addedLink.getRelationship()).add(savedVo));
+
+        return mergedOutgoing.values().stream().toList();
+    }
+
+    private ClassNodeVo handleIncoming(final ClassNode uniqueNode, final ClassNodeVo savedVo)
+    {
+        final var incomingNeighboursMap = classNodeRepository.findAllById(uniqueNode.incomingNeighbours().keySet()).stream()
+            .collect(Collectors.toMap(ClassNodeVo::getId, Function.identity()));
+
+        final var updateIncomingLinks = uniqueNode.incomingNeighbours().entrySet().stream()
+            .flatMap(incomingNeighbour -> incomingNeighbour.getValue().stream()
+                .map(relationship -> LinkVo.builder()
+                    .withRelationship(relationship)
+                    .withDestinationId(uniqueNode.id())
+                    .withSourceId(incomingNeighbour.getKey())
+                    .build()))
+            .collect(Collectors.groupingBy(LinkVo::getRelationship)).entrySet().stream()
+            .collect(Collectors.toMap(Map.Entry::getKey,
+                links -> links.getValue().stream().map(link -> incomingNeighboursMap.get(link.getSourceId())).toList()));
+
+        savedVo.setNeighbours(updateIncomingLinks);
+
+        return savedVo;
     }
 }

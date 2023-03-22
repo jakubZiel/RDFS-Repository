@@ -22,5 +22,7 @@ public interface ClassNodeService
 
     void deleteById(long id);
 
+    void deleteAll(long projectId);
+
     ProjectNodeMetadata findProjectNodeMetaData(long projectId);
 }
