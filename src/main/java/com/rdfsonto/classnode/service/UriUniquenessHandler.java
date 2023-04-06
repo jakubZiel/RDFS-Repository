@@ -46,6 +46,7 @@ public class UriUniquenessHandler
 
         return nonUniqueUriClassNode.toBuilder()
             .withUri(uniqueUri)
+            .withClassLabels(nonUniqueUriClassNode.classLabels())
             .build();
     }
 

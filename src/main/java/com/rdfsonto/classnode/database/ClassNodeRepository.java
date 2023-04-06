@@ -11,20 +11,6 @@ import org.springframework.data.repository.query.Param;
 public interface ClassNodeRepository extends Neo4jRepository<ClassNodeVo, Long>
 {
     @Query("""
-        MATCH (n:Resource)-[relation]->(neighbour:Resource)
-        WHERE id(n) = $nodeId
-        RETURN neighbour, type(relation) as relation
-        """)
-    List<ClassNodeVo> findAllOutgoingNeighbours(@Param("nodeId") long id);
-
-    @Query("""
-        MATCH (n:Resource)<-[relation]-(neighbour:Resource)
-        WHERE id(n) = $nodeId
-        RETURN neighbour, type(relation) as relation
-        """)
-    List<ClassNodeVo> findAllIncomingNeighbours(@Param("nodeId") long id);
-
-    @Query("""
         MATCH (n:Resource)<-[rel]-(neighbour:Resource)
         WHERE id(n) IN $nodeIds
         RETURN neighbour, type(rel) as relation, id(n) as source
@@ -40,7 +26,7 @@ public interface ClassNodeRepository extends Neo4jRepository<ClassNodeVo, Long>
         MATCH (n:Resource) WHERE id(n) = $nodeId
         RETURN n as node
         """)
-    List<ClassNodeVo> findAllNeighbours(@Param("maxDistance") int maxDistance, @Param("nodeId") long sourceNodeId);
+    List<ClassNodeProjection> findAllNeighbours(@Param("maxDistance") int maxDistance, @Param("nodeId") long sourceNodeId);
 
     @Query("""
         MATCH (n:Resource) WHERE id(n) = $nodeId
@@ -107,4 +93,10 @@ public interface ClassNodeRepository extends Neo4jRepository<ClassNodeVo, Long>
     void deleteAllByClassLabels(List<String> classLabels);
 
     Optional<ClassNodeVo> findByUri(String uri);
+
+    Optional<ClassNodeProjection> findProjectionById(Long id);
+
+    Optional<ClassNodeProjection> findByUriIs(String uri);
+
+    ClassNodeProjection save(ClassNodeProjection classNodeProjection);
 }

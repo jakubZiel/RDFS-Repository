@@ -2,7 +2,6 @@ package com.rdfsonto.classnode.database;
 
 import static org.springframework.data.neo4j.core.schema.Relationship.Direction.INCOMING;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -13,7 +12,6 @@ import org.springframework.data.neo4j.core.schema.Node;
 import org.springframework.data.neo4j.core.schema.Relationship;
 
 import lombok.Builder;
-import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -31,7 +29,7 @@ public class ClassNodeVo
     @DynamicLabels
     private List<String> classLabels;
 
-    //TODO check if it works
+    // TODO check if it works
     private Map<String, Object> properties;
 
     @Relationship(direction = INCOMING)
@@ -40,4 +38,5 @@ public class ClassNodeVo
     private String relation;
     private String uri;
     private Long source;
+    private Long relationshipId;
 }

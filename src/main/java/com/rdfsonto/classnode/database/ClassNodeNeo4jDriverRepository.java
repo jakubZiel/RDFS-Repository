@@ -6,7 +6,7 @@ import java.util.stream.Collectors;
 
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.exceptions.Neo4jException;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Repository;
 
 import com.rdfsonto.classnode.service.FilterCondition;
 
@@ -15,29 +15,27 @@ import lombok.extern.slf4j.Slf4j;
 
 
 @Slf4j
-@Component
+@Repository
 @RequiredArgsConstructor
 public class ClassNodeNeo4jDriverRepository
 {
-    enum Direction
-    {
-        INCOMING, OUTGOING
-    }
-
+    private static final String CREATE_NODE_TEMPLATE = """
+        CREATE (node:Resource{uri: $uri}) return node
+        """;
     private static final String OUTGOING_NEIGHBOURS_QUERY_TEMPLATE = """
         MATCH (n:Resource)-[rel]->(neighbour:Resource)
         WHERE id(n) IN $nodeIds
-        RETURN neighbour, id(n) as source, type(rel) as relation
+        RETURN neighbour, id(n) as source, type(rel) as relation, id(rel) as relationshipId
         """;
 
     private static final String INCOMING_NEIGHBOURS_QUERY_TEMPLATE = """
         MATCH (n:Resource)<-[rel]-(neighbour:Resource)
         WHERE id(n) IN $nodeIds
-        RETURN neighbour, id(n) as source, type(rel) as relation
+        RETURN neighbour, id(n) as source, type(rel) as relation, id(rel) as relationshipId
         """;
 
     private static final String SAVE_INCOMING_RELATIONSHIPS_QUERY_TEMPLATE = """
-        UNWIND %s as incoming
+        UNWIND $incoming as incoming
         MATCH (n:Resource), (m:Resource)
         WHERE id(n) = %d and id(m) = incoming[0]
         MERGE (m)-[relation:`incoming[1]`]->(n)
@@ -45,7 +43,7 @@ public class ClassNodeNeo4jDriverRepository
         """;
 
     private static final String SAVE_OUTGOING_RELATIONSHIPS_QUERY_TEMPLATE = """
-        UNWIND $outgoing as $outgoing
+        UNWIND $outgoing as outgoing
         MATCH (n:Resource), (m:Resource)
         WHERE id(n) = $nodeId and id(m) = $outgoing[0]
         MERGE (m)<-[relation:`$outgoing[1]`]-(n)
@@ -62,6 +60,7 @@ public class ClassNodeNeo4jDriverRepository
     private static final String RELATION_RECORD_KEY = "relation";
     private static final String SOURCE_NODE_ID_RECORD_KEY = "source";
     private static final String NODE_KEY = "node";
+    private static final String RELATIONSHIP_ID_KEY = "relationshipId";
     private static final String AND = "AND";
 
     private final Driver driver;
@@ -70,11 +69,22 @@ public class ClassNodeNeo4jDriverRepository
 
     public List<ClassNodeVo> findAllIncomingNeighbours(final List<Long> ids)
     {
-        return findNeighbours(ids, Direction.INCOMING);
+        return findNeighbours(ids, RelationshipDirection.INCOMING);
     }
+
     public List<ClassNodeVo> findAllOutgoingNeighbours(final List<Long> ids)
     {
-        return findNeighbours(ids, Direction.OUTGOING);
+        return findNeighbours(ids, RelationshipDirection.OUTGOING);
+    }
+
+    public ClassNodeVo create(final ClassNodeVo nodeVo)
+    {
+        final var session = driver.session();
+        final var paramMap = Map.of("uri", (Object) nodeVo.getUri());
+
+        final var result = session.run(CREATE_NODE_TEMPLATE, paramMap).single();
+
+        return classNodeVoMapper.mapToVo(result.get(NODE_KEY).asNode(), null, null, null);
     }
 
     public Map<Long, Map<String, Object>> findAllNodeProperties(final List<Long> ids)
@@ -96,7 +106,6 @@ public class ClassNodeNeo4jDriverRepository
     }
 
     // TODO
-
     public List<Long> findAllNodeIdsByPropertiesAndLabels(final List<String> labels, final List<FilterCondition> propertyFilters)
     {
         try (final var session = driver.session())
@@ -115,9 +124,11 @@ public class ClassNodeNeo4jDriverRepository
             return null;
         }
     }
-    private List<ClassNodeVo> findNeighbours(final List<Long> ids, final Direction relationshipDirection)
+
+    private List<ClassNodeVo> findNeighbours(final List<Long> ids, final RelationshipDirection relationshipDirection)
     {
-        final var query = relationshipDirection == Direction.INCOMING ? INCOMING_NEIGHBOURS_QUERY_TEMPLATE : OUTGOING_NEIGHBOURS_QUERY_TEMPLATE;
+        final var query = relationshipDirection == RelationshipDirection.INCOMING ?
+            INCOMING_NEIGHBOURS_QUERY_TEMPLATE : OUTGOING_NEIGHBOURS_QUERY_TEMPLATE;
 
         if (ids == null || ids.isEmpty())
         {
@@ -132,7 +143,8 @@ public class ClassNodeNeo4jDriverRepository
             return queryResult.list(record -> classNodeVoMapper.mapToVo(
                 record.get(NEIGHBOUR_RECORD_KEY).asNode(),
                 record.get(RELATION_RECORD_KEY).asString(),
-                record.get(SOURCE_NODE_ID_RECORD_KEY).asLong()));
+                record.get(SOURCE_NODE_ID_RECORD_KEY).asLong(),
+                record.get(RELATIONSHIP_ID_KEY).asLong()));
         }
         catch (final Neo4jException exception)
         {

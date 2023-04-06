@@ -6,11 +6,15 @@ import lombok.Getter;
 
 
 @Getter
-@EqualsAndHashCode
 @Builder(setterPrefix = "with")
-public class LinkVo
+@EqualsAndHashCode(onlyExplicitlyIncluded = true)
+public class RelationshipVo
 {
+    private final Long relationshipId;
+    @EqualsAndHashCode.Include
     private final long sourceId;
+    @EqualsAndHashCode.Include
     private final long destinationId;
+    @EqualsAndHashCode.Include
     private final String relationship;
 }

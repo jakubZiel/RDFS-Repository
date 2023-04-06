@@ -10,13 +10,14 @@ import com.rdfsonto.classnode.service.ClassNode;
 @Component
 public class ClassNodeVoMapper
 {
-    ClassNodeVo mapToVo(final Node genericNode, final String relation, final Long sourceNodeId)
+    ClassNodeVo mapToVo(final Node genericNode, final String relation, final Long sourceNodeId, final Long relationshipId)
     {
         return ClassNodeVo.builder()
             .withClassLabels(Lists.newArrayList(genericNode.labels()))
             .withId(genericNode.id())
             .withRelation(relation)
             .withSource(sourceNodeId)
+            .withRelationshipId(relationshipId)
             .build();
     }
 
