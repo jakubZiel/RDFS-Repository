@@ -5,17 +5,17 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import java.util.stream.Stream;
 
+import org.apache.logging.log4j.util.Strings;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.Query;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.Value;
 import org.neo4j.driver.exceptions.Neo4jException;
-import org.springframework.data.neo4j.core.Neo4jTemplate;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Repository;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.rdfsonto.classnode.service.ClassNode;
 import com.rdfsonto.classnode.service.FilterCondition;
 
@@ -28,10 +28,12 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class ClassNodeNeo4jDriverRepository
 {
+    private static final String MATCH_NODE_TEMPLATE = """
+        MATCH (node:Resource) where id(node) = $nodeId
+        """;
     private static final String CREATE_NODE_TEMPLATE = """
         CREATE (node:Resource{uri: $uri}) return node
         """;
-
     private static final String CLEAR_PROPERTIES_TEMPLATE = """
         node = {uri: $uri}
         """;
@@ -40,7 +42,7 @@ public class ClassNodeNeo4jDriverRepository
         MATCH (node) where id(node) = %s
         SET""";
     private static final String SET_PROPERTY_TEMPLATE = """
-        node.`%s` = $%s""";
+        node.`%s` = $param%s""";
 
     private static final String OUTGOING_NEIGHBOURS_QUERY_TEMPLATE = """
         MATCH (n:Resource)-[rel]->(neighbour:Resource)
@@ -65,6 +67,7 @@ public class ClassNodeNeo4jDriverRepository
     private static final String SOURCE_NODE_ID_RECORD_KEY = "source";
     private static final String NODE_KEY = "node";
     private static final String NODE_IDS_KEY = "nodeIds";
+    private static final String NODE_ID_KEY = "nodeId";
     private static final String URI_KEY = "uri";
     private static final String RELATIONSHIP_ID_KEY = "relationshipId";
     private static final String AND = "AND";
@@ -96,7 +99,7 @@ public class ClassNodeNeo4jDriverRepository
                 .collect(Collectors.toSet());
 
             handleLabelsDiff(updateNode, nodeId, transaction);
-            handlePropertiesDiff(updateNode, transaction);
+            handlePropertiesDiff(updateNode, nodeId, transaction);
             handleRelationshipDiff(nodeId, true, updateNode.incomingNeighbours(), incomingLinks, transaction);
             handleRelationshipDiff(nodeId, false, updateNode.outgoingNeighbours(), outgoingLinks, transaction);
 
@@ -256,58 +259,65 @@ public class ClassNodeNeo4jDriverRepository
         relationshipNeo4jDriverRepository.delete(toDelete, transaction);
     }
 
-    // TODO
-    private void handlePropertiesDiff(final ClassNode nodeUpdate, final Transaction transaction)
+    private void handlePropertiesDiff(final ClassNode nodeUpdate, final long nodeId, final Transaction transaction)
     {
-        final var uriParam = Map.of("uri", (Object) nodeUpdate.uri());
-        final var clearProps = new Query(SET_NODE_PROPERTIES_TEMPLATE.formatted(nodeUpdate.id()) + "\n" + CLEAR_PROPERTIES_TEMPLATE, uriParam);
+        final var uriParam = Map.of(URI_KEY, (Object) nodeUpdate.uri());
 
-        transaction.run(clearProps);
+        final var clearPropsStatement = Strings.join(
+            List.of(SET_NODE_PROPERTIES_TEMPLATE.formatted(nodeId),
+                CLEAR_PROPERTIES_TEMPLATE), '\n');
+
+        final var clearPropsQuery = new Query(clearPropsStatement, uriParam);
+        transaction.run(clearPropsQuery);
 
         if (nodeUpdate.properties().isEmpty())
         {
             return;
         }
 
-        final var queryBuilder = new StringBuilder(SET_NODE_PROPERTIES_TEMPLATE.formatted(nodeUpdate.id()));
+        final var properties = nodeUpdate.properties().entrySet().stream()
+            .map(entry -> Pair.of(entry.getKey(), entry.getValue()))
+            .toList();
 
-        final var paramIterator = nodeUpdate.properties().entrySet().iterator();
+        final var setPropertiesComponents = IntStream.range(0, nodeUpdate.properties().size())
+            .mapToObj(index -> SET_PROPERTY_TEMPLATE.formatted(properties.get(index).getFirst(), index))
+            .toList();
 
-        final var paramMap = IntStream.rangeClosed(1, nodeUpdate.properties().size())
-            .mapToObj(integer -> "prop" + integer)
-            .map(paramKey -> Pair.of(paramKey, paramIterator.next().getValue()))
+        final var setPropertiesStatement = Strings.join(setPropertiesComponents, ',');
+        final var matchAndSetPropertiesComponents = List.of(SET_NODE_PROPERTIES_TEMPLATE.formatted(nodeId), setPropertiesStatement);
+        final var matchAndSetPropertiesStatement = Strings.join(matchAndSetPropertiesComponents, '\n');
+
+        final var paramMap = IntStream.range(0, nodeUpdate.properties().size())
+            .mapToObj(index -> Pair.of("param" + index, properties.get(index).getSecond()))
             .collect(Collectors.toMap(Pair::getFirst, Pair::getSecond));
 
-        final var propertyIterator = nodeUpdate.properties().entrySet().iterator();
+        final var updatePropertiesQuery = new Query(matchAndSetPropertiesStatement, paramMap);
 
-        final var propertyMap = IntStream.rangeClosed(1, nodeUpdate.properties().size())
-            .mapToObj(integer -> "prop" + integer)
-            .map(paramKey -> Pair.of(paramKey, propertyIterator.next().getKey()))
-            .collect(Collectors.toMap(Pair::getFirst, Pair::getSecond));
-
-        propertyMap.forEach((key, value) -> {
-            queryBuilder.append("\n").append(SET_PROPERTY_TEMPLATE.formatted(value, key)).append(",");
-        });
-
-        final var query = queryBuilder.deleteCharAt(queryBuilder.length() - 1).toString();
-        transaction.run(query, paramMap);
+        transaction.run(updatePropertiesQuery);
     }
 
-    // TODO make it nicer
     private void handleLabelsDiff(final ClassNode nodeUpdate, final long nodeId, final Transaction transaction)
     {
-        final var addNewLabels = new StringBuilder("SET node");
-        Stream.concat(Stream.of("Resource"), nodeUpdate.classLabels().stream())
-            .forEach(label -> addNewLabels.append(":").append("`").append(label).append("`"));
+        final Map<String, Object> nodeIdParamMap = Map.of(NODE_ID_KEY, nodeId);
+        final var queryNodeLabels = new Query(MATCH_NODE_TEMPLATE + "return labels(node) as labels", nodeIdParamMap);
 
-        final var labels = transaction.run(new Query("match (n) where id(n) = $nodeId return labels(n) as labels", Map.of("nodeId", nodeId)))
-            .single().get("labels").asList(Value::asString);
+        final var persistedLabels = transaction.run(queryNodeLabels).single().get("labels").asList(Value::asString).stream()
+            .map("`%s`"::formatted)
+            .toList();
 
-        final var removeOldLabels = new StringBuilder("REMOVE node");
-        labels.forEach(label -> removeOldLabels.append(":").append("`").append(label).append("`"));
+        final var updateLabels = nodeUpdate.classLabels().stream()
+            .map("`%s`"::formatted)
+            .distinct()
+            .toList();
 
-        final var query = "MATCH (node) where id(node) = $nodeId" + "\n" + removeOldLabels + "\n" + addNewLabels;
+        final var setQuery = "SET node:" + Strings.join(updateLabels, ':');
+        final var removeQuery = "REMOVE node:" + Strings.join(persistedLabels, ':');
 
-        transaction.run(new Query(query, Map.of("nodeId", nodeId)));
+        final var updateLabelsQueryComponents = List.of(MATCH_NODE_TEMPLATE, removeQuery, setQuery);
+        final var updateLabelsQuery = Strings.join(updateLabelsQueryComponents, '\n');
+
+        final var query = new Query(updateLabelsQuery, nodeIdParamMap);
+
+        transaction.run(query);
     }
 }

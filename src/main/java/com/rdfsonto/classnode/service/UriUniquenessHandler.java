@@ -43,6 +43,7 @@ public class UriUniquenessHandler
         final var uniqueUri = nonUniqueUri.replace("#", projectTag + "#");
 
         nonUniqueUriClassNode.classLabels().add(getClassNodeLabel(projectTag));
+        nonUniqueUriClassNode.classLabels().add("Resource");
 
         return nonUniqueUriClassNode.toBuilder()
             .withUri(uniqueUri)

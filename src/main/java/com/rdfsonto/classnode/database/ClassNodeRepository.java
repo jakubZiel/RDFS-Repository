@@ -15,7 +15,7 @@ public interface ClassNodeRepository extends Neo4jRepository<ClassNodeVo, Long>
         WHERE id(n) IN $nodeIds
         RETURN neighbour, type(rel) as relation, id(n) as source
         """)
-    List<ClassNodeVo> findAllIncomingNeighbours(@Param("nodeIds") List<Long> ids);
+    List<ClassNodeProjection> findAllIncomingNeighbours(@Param("nodeIds") List<Long> ids);
 
     @Query("""
         MATCH (n:Resource) WHERE id(n) = $nodeId
@@ -92,9 +92,7 @@ public interface ClassNodeRepository extends Neo4jRepository<ClassNodeVo, Long>
 
     void deleteAllByClassLabels(List<String> classLabels);
 
-    Optional<ClassNodeVo> findByUri(String uri);
+    Optional<ClassNodeProjection> findByUri(String uri);
 
     Optional<ClassNodeProjection> findProjectionById(Long id);
-
-    Optional<ClassNodeProjection> findByUriIs(String uri);
 }
