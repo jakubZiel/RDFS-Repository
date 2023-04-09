@@ -4,10 +4,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.neo4j.driver.Driver;
 import org.neo4j.driver.Query;
-import org.neo4j.driver.exceptions.Neo4jException;
+import org.neo4j.driver.Transaction;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import lombok.Builder;
 import lombok.RequiredArgsConstructor;
@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Repository
+@Transactional
 @RequiredArgsConstructor
 public class RelationshipNeo4jDriverRepository
 {
@@ -49,50 +50,32 @@ public class RelationshipNeo4jDriverRepository
         CREATE (n1)<-[:`%s`]-(n2)
         """;
 
-    private final Driver driver;
-
     // TODO - test saving by passing projection to Neo4jTemplate::save(...)
-    public boolean save(final List<RelationshipVo> relationships)
+    public boolean save(final List<RelationshipVo> relationships, final Transaction transaction)
     {
         if (relationships.isEmpty())
         {
             return true;
         }
 
-        try (final var session = driver.session())
-        {
-            final var saveQuery = buildSaveQuery(relationships);
-            session.run(saveQuery);
-            return true;
-        }
-        catch (final Neo4jException exception)
-        {
-            log.error(exception.getMessage());
-            return false;
-        }
+        final var saveQueries = buildSaveQueries(relationships);
+        saveQueries.forEach(transaction::run);
+        return true;
     }
 
-    public boolean delete(final List<RelationshipVo> relationships)
+    public boolean delete(final List<RelationshipVo> relationships, final Transaction transaction)
     {
         if (relationships.isEmpty())
         {
             return true;
         }
 
-        try (final var session = driver.session())
-        {
-            final var deleteQuery = buildDeleteQuery(relationships);
-            session.run(deleteQuery);
-            return true;
-        }
-        catch (final Neo4jException exception)
-        {
-            log.error(exception.getMessage());
-            return false;
-        }
+        final var deleteQuery = buildDeleteQuery(relationships);
+        transaction.run(deleteQuery);
+        return true;
     }
 
-    private Query buildSaveQuery(final List<RelationshipVo> relationships)
+    private List<Query> buildSaveQueries(final List<RelationshipVo> relationships)
     {
         final var relationshipsGroupedByLink = relationships.stream()
             .collect(Collectors.groupingBy(x -> RelationshipId.builder()
@@ -100,16 +83,12 @@ public class RelationshipNeo4jDriverRepository
                 .withEndNode(Math.max(x.getSourceId(), x.getDestinationId()))
                 .build()));
 
-        final var query = relationshipsGroupedByLink.entrySet().stream()
+        return relationshipsGroupedByLink.entrySet().stream()
             .map(relationshipsByLink -> buildRelationshipQueryForLink(relationshipsByLink.getKey(), relationshipsByLink.getValue()))
-            .reduce(new StringBuilder(), StringBuilder::append);
-
-        final var multipleStatementSafeQuery = MULTIPLE_STATEMENT_QUERY.formatted(query.toString());
-
-        return new Query(multipleStatementSafeQuery);
+            .toList();
     }
 
-    private StringBuilder buildRelationshipQueryForLink(final RelationshipId relationshipId, List<RelationshipVo> relationships)
+    private Query buildRelationshipQueryForLink(final RelationshipId relationshipId, List<RelationshipVo> relationships)
     {
         final var start = relationshipId.startNode();
         final var end = relationshipId.endNode();
@@ -126,9 +105,7 @@ public class RelationshipNeo4jDriverRepository
             query.append("\n").append(createRelationshipStatement);
         });
 
-        return query
-            .deleteCharAt(query.length() - 1)
-            .append(";").append("\n");
+        return new Query(query.toString());
     }
 
     private Query buildDeleteQuery(final List<RelationshipVo> relationships)

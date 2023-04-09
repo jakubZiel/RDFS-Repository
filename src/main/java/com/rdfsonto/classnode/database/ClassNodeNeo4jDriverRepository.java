@@ -2,12 +2,21 @@ package com.rdfsonto.classnode.database;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import org.neo4j.driver.Driver;
+import org.neo4j.driver.Query;
+import org.neo4j.driver.Transaction;
+import org.neo4j.driver.Value;
 import org.neo4j.driver.exceptions.Neo4jException;
+import org.springframework.data.neo4j.core.Neo4jTemplate;
+import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Repository;
 
+import com.rdfsonto.classnode.service.ClassNode;
 import com.rdfsonto.classnode.service.FilterCondition;
 
 import lombok.RequiredArgsConstructor;
@@ -22,6 +31,17 @@ public class ClassNodeNeo4jDriverRepository
     private static final String CREATE_NODE_TEMPLATE = """
         CREATE (node:Resource{uri: $uri}) return node
         """;
+
+    private static final String CLEAR_PROPERTIES_TEMPLATE = """
+        node = {uri: $uri}
+        """;
+
+    private static final String SET_NODE_PROPERTIES_TEMPLATE = """
+        MATCH (node) where id(node) = %s
+        SET""";
+    private static final String SET_PROPERTY_TEMPLATE = """
+        node.`%s` = $%s""";
+
     private static final String OUTGOING_NEIGHBOURS_QUERY_TEMPLATE = """
         MATCH (n:Resource)-[rel]->(neighbour:Resource)
         WHERE id(n) IN $nodeIds
@@ -34,22 +54,6 @@ public class ClassNodeNeo4jDriverRepository
         RETURN neighbour, id(n) as source, type(rel) as relation, id(rel) as relationshipId
         """;
 
-    private static final String SAVE_INCOMING_RELATIONSHIPS_QUERY_TEMPLATE = """
-        UNWIND $incoming as incoming
-        MATCH (n:Resource), (m:Resource)
-        WHERE id(n) = %d and id(m) = incoming[0]
-        MERGE (m)-[relation:`incoming[1]`]->(n)
-        RETURN relation
-        """;
-
-    private static final String SAVE_OUTGOING_RELATIONSHIPS_QUERY_TEMPLATE = """
-        UNWIND $outgoing as outgoing
-        MATCH (n:Resource), (m:Resource)
-        WHERE id(n) = $nodeId and id(m) = $outgoing[0]
-        MERGE (m)<-[relation:`$outgoing[1]`]-(n)
-        RETURN relation
-        """;
-
     private static final String FIND_ALL_NODE_PROPERTIES_QUERY_TEMPLATE = """
         UNWIND $nodeIds AS nodeId
         MATCH (n:Resource) WHERE id(n) = nodeId
@@ -60,12 +64,62 @@ public class ClassNodeNeo4jDriverRepository
     private static final String RELATION_RECORD_KEY = "relation";
     private static final String SOURCE_NODE_ID_RECORD_KEY = "source";
     private static final String NODE_KEY = "node";
+    private static final String NODE_IDS_KEY = "nodeIds";
+    private static final String URI_KEY = "uri";
     private static final String RELATIONSHIP_ID_KEY = "relationshipId";
     private static final String AND = "AND";
 
     private final Driver driver;
+    private final RelationshipNeo4jDriverRepository relationshipNeo4jDriverRepository;
+    private final ClassNodeRepository classNodeRepository;
+
     private final ClassNodeVoMapper classNodeVoMapper;
     private final ClassNodePropertiesVoMapper classNodePropertiesVoMapper;
+    private final RelationshipVoMapper relationshipVoMapper;
+
+    public ClassNodeProjection save(final ClassNode updateNode)
+    {
+        final var transaction = driver.session().beginTransaction();
+
+        try
+        {
+            final var nodeId = classNodeRepository.findProjectionById(updateNode.id())
+                .map(ClassNodeProjection::getId)
+                .orElseGet(() -> create(updateNode, transaction).getId());
+
+            final Set<RelationshipVo> incomingLinks = findAllIncomingNeighbours(List.of(nodeId)).stream()
+                .map(nodeConnection -> relationshipVoMapper.mapToVo(nodeConnection, updateNode.id(), true))
+                .collect(Collectors.toSet());
+
+            final Set<RelationshipVo> outgoingLinks = findAllOutgoingNeighbours(List.of(nodeId)).stream()
+                .map(nodeConnection -> relationshipVoMapper.mapToVo(nodeConnection, updateNode.id(), false))
+                .collect(Collectors.toSet());
+
+            handleLabelsDiff(updateNode, nodeId, transaction);
+            handlePropertiesDiff(updateNode, transaction);
+            handleRelationshipDiff(nodeId, true, updateNode.incomingNeighbours(), incomingLinks, transaction);
+            handleRelationshipDiff(nodeId, false, updateNode.outgoingNeighbours(), outgoingLinks, transaction);
+
+            transaction.commit();
+
+            // TODO make it inside commit
+            return classNodeRepository.findProjectionById(nodeId)
+                .orElseThrow(() -> new IllegalStateException("Class node with ID: %s is not found after after being saved.".formatted(nodeId)));
+        }
+        catch (final Exception exception)
+        {
+            transaction.rollback();
+            throw exception;
+        }
+    }
+
+    public ClassNodeVo create(final ClassNode node, final Transaction transaction)
+    {
+        final var paramMap = Map.of(URI_KEY, (Object) node.uri());
+        final var result = transaction.run(CREATE_NODE_TEMPLATE, paramMap).single();
+
+        return classNodeVoMapper.mapToVo(result.get(NODE_KEY).asNode(), null, null, null);
+    }
 
     public List<ClassNodeVo> findAllIncomingNeighbours(final List<Long> ids)
     {
@@ -75,16 +129,6 @@ public class ClassNodeNeo4jDriverRepository
     public List<ClassNodeVo> findAllOutgoingNeighbours(final List<Long> ids)
     {
         return findNeighbours(ids, RelationshipDirection.OUTGOING);
-    }
-
-    public ClassNodeVo create(final ClassNodeVo nodeVo)
-    {
-        final var session = driver.session();
-        final var paramMap = Map.of("uri", (Object) nodeVo.getUri());
-
-        final var result = session.run(CREATE_NODE_TEMPLATE, paramMap).single();
-
-        return classNodeVoMapper.mapToVo(result.get(NODE_KEY).asNode(), null, null, null);
     }
 
     public Map<Long, Map<String, Object>> findAllNodeProperties(final List<Long> ids)
@@ -137,7 +181,7 @@ public class ClassNodeNeo4jDriverRepository
 
         try (final var session = driver.session())
         {
-            final var paramMap = Map.of("nodeIds", (Object) ids);
+            final var paramMap = Map.of(NODE_IDS_KEY, (Object) ids);
             final var queryResult = session.run(query, paramMap);
 
             return queryResult.list(record -> classNodeVoMapper.mapToVo(
@@ -182,5 +226,88 @@ public class ClassNodeNeo4jDriverRepository
         whereClause.delete(unusedAndIndex, unusedAndIndex + AND.length());
 
         return whereClause.toString();
+    }
+
+    private void handleRelationshipDiff(final long nodeId,
+                                        final boolean isIncoming,
+                                        final Map<Long, List<String>> updateLinks,
+                                        final Set<RelationshipVo> originalLinks,
+                                        final Transaction transaction)
+    {
+        final var update = updateLinks
+            .entrySet().stream()
+            .flatMap(neighbour -> neighbour.getValue().stream()
+                .map(relationship -> RelationshipVo.builder()
+                    .withRelationship(relationship)
+                    .withDestinationId(isIncoming ? nodeId : neighbour.getKey())
+                    .withSourceId(isIncoming ? neighbour.getKey() : nodeId)
+                    .build()))
+            .collect(Collectors.toSet());
+
+        final var toDelete = originalLinks.stream()
+            .filter(incoming -> !update.contains(incoming))
+            .toList();
+
+        final var toCreate = update.stream()
+            .filter(incoming -> !originalLinks.contains(incoming))
+            .toList();
+
+        relationshipNeo4jDriverRepository.save(toCreate, transaction);
+        relationshipNeo4jDriverRepository.delete(toDelete, transaction);
+    }
+
+    // TODO
+    private void handlePropertiesDiff(final ClassNode nodeUpdate, final Transaction transaction)
+    {
+        final var uriParam = Map.of("uri", (Object) nodeUpdate.uri());
+        final var clearProps = new Query(SET_NODE_PROPERTIES_TEMPLATE.formatted(nodeUpdate.id()) + "\n" + CLEAR_PROPERTIES_TEMPLATE, uriParam);
+
+        transaction.run(clearProps);
+
+        if (nodeUpdate.properties().isEmpty())
+        {
+            return;
+        }
+
+        final var queryBuilder = new StringBuilder(SET_NODE_PROPERTIES_TEMPLATE.formatted(nodeUpdate.id()));
+
+        final var paramIterator = nodeUpdate.properties().entrySet().iterator();
+
+        final var paramMap = IntStream.rangeClosed(1, nodeUpdate.properties().size())
+            .mapToObj(integer -> "prop" + integer)
+            .map(paramKey -> Pair.of(paramKey, paramIterator.next().getValue()))
+            .collect(Collectors.toMap(Pair::getFirst, Pair::getSecond));
+
+        final var propertyIterator = nodeUpdate.properties().entrySet().iterator();
+
+        final var propertyMap = IntStream.rangeClosed(1, nodeUpdate.properties().size())
+            .mapToObj(integer -> "prop" + integer)
+            .map(paramKey -> Pair.of(paramKey, propertyIterator.next().getKey()))
+            .collect(Collectors.toMap(Pair::getFirst, Pair::getSecond));
+
+        propertyMap.forEach((key, value) -> {
+            queryBuilder.append("\n").append(SET_PROPERTY_TEMPLATE.formatted(value, key)).append(",");
+        });
+
+        final var query = queryBuilder.deleteCharAt(queryBuilder.length() - 1).toString();
+        transaction.run(query, paramMap);
+    }
+
+    // TODO make it nicer
+    private void handleLabelsDiff(final ClassNode nodeUpdate, final long nodeId, final Transaction transaction)
+    {
+        final var addNewLabels = new StringBuilder("SET node");
+        Stream.concat(Stream.of("Resource"), nodeUpdate.classLabels().stream())
+            .forEach(label -> addNewLabels.append(":").append("`").append(label).append("`"));
+
+        final var labels = transaction.run(new Query("match (n) where id(n) = $nodeId return labels(n) as labels", Map.of("nodeId", nodeId)))
+            .single().get("labels").asList(Value::asString);
+
+        final var removeOldLabels = new StringBuilder("REMOVE node");
+        labels.forEach(label -> removeOldLabels.append(":").append("`").append(label).append("`"));
+
+        final var query = "MATCH (node) where id(node) = $nodeId" + "\n" + removeOldLabels + "\n" + addNewLabels;
+
+        transaction.run(new Query(query, Map.of("nodeId", nodeId)));
     }
 }

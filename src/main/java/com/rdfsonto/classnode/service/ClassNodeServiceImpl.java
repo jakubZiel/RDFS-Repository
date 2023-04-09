@@ -1,6 +1,5 @@
 package com.rdfsonto.classnode.service;
 
-import static com.rdfsonto.classnode.service.ClassNodeExceptionErrorCode.DATABASE_INTERNAL_ERROR;
 import static com.rdfsonto.classnode.service.ClassNodeExceptionErrorCode.INVALID_MAX_DISTANCE;
 import static com.rdfsonto.classnode.service.ClassNodeExceptionErrorCode.INVALID_NODE_ID;
 import static com.rdfsonto.classnode.service.ClassNodeExceptionErrorCode.INVALID_NODE_URI;
@@ -8,9 +7,7 @@ import static com.rdfsonto.classnode.service.ClassNodeExceptionErrorCode.INVALID
 import static com.rdfsonto.classnode.service.ClassNodeExceptionErrorCode.INVALID_REQUEST;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
-import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.NotImplementedException;
@@ -20,12 +17,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepository;
 import com.rdfsonto.classnode.database.ClassNodeProjection;
-import com.rdfsonto.classnode.database.ClassNodePropertiesProjection;
 import com.rdfsonto.classnode.database.ClassNodeRepository;
 import com.rdfsonto.classnode.database.ClassNodeVo;
 import com.rdfsonto.classnode.database.ClassNodeVoMapper;
 import com.rdfsonto.classnode.database.RelationshipNeo4jDriverRepository;
-import com.rdfsonto.classnode.database.RelationshipVo;
 import com.rdfsonto.classnode.database.RelationshipVoMapper;
 import com.rdfsonto.project.service.ProjectService;
 
@@ -42,13 +37,9 @@ public class ClassNodeServiceImpl implements ClassNodeService
     private final static long MAX_NUMBER_OF_NEIGHBOURS = 1000;
     private final ClassNodeRepository classNodeRepository;
     private final ClassNodeNeo4jDriverRepository classNodeNeo4jDriverRepository;
-    private final RelationshipNeo4jDriverRepository relationshipNeo4jDriverRepository;
     private final ClassNodeMapper classNodeMapper;
-    private final ClassNodeVoMapper classNodeVoMapper;
-    private final RelationshipVoMapper relationshipVoMapper;
     private final ProjectService projectService;
     private final UriUniquenessHandler uriHandler;
-    private final Neo4jTemplate neo4jTemplate;
 
     @Override
     public List<ClassNode> findByIds(final List<Long> ids)
@@ -189,44 +180,24 @@ public class ClassNodeServiceImpl implements ClassNodeService
 
     // TODO take care of more types of relationship coming from the same node - TEST IT!!!
     @Override
-    public ClassNode save(final ClassNode node, final long projectId)
+    public ClassNode save(final ClassNode nodeToSave, final long projectId)
     {
         final var project = projectService.findById(projectId)
             .orElseThrow(() ->
                 new ClassNodeException("Can not save class node in non-existing project with ID: %s".formatted(projectId),
                     INVALID_PROJECT_ID));
 
-        final var uniqueNode = uriHandler.applyUniqueness(node, projectService.getProjectTag(project));
-        final var persistedNode = saveIfNotPersisted(uniqueNode);
+        final var uniqueNode = uriHandler.applyUniqueness(nodeToSave, projectService.getProjectTag(project));
 
-        try
-        {
-            final var nodeId = List.of(persistedNode.getId());
+        Optional.of(uniqueNode)
+            .filter(node -> node.id() == null)
+            .filter(node -> classNodeRepository.findByUri(node.uri()).isPresent())
+            .ifPresent(duplicateUriNode -> {
+                throw new ClassNodeException("Attempted to create node with already existing URI: %s".formatted(duplicateUriNode.uri()),
+                    INVALID_REQUEST);
+            });
 
-            final Set<RelationshipVo> incomingLinks = node.id() != null ? classNodeNeo4jDriverRepository.findAllIncomingNeighbours(nodeId).stream()
-                .map(nodeConnection -> relationshipVoMapper.mapToVo(nodeConnection, uniqueNode.id(), true))
-                .collect(Collectors.toSet()) : Set.of();
-
-            final Set<RelationshipVo> outgoingLinks = node.id() != null ? classNodeNeo4jDriverRepository.findAllOutgoingNeighbours(nodeId).stream()
-                .map(nodeConnection -> relationshipVoMapper.mapToVo(nodeConnection, uniqueNode.id(), false))
-                .collect(Collectors.toSet()) : Set.of();
-
-            handleRelationshipDiff(persistedNode.getId(), true, uniqueNode.incomingNeighbours(), incomingLinks);
-            handleRelationshipDiff(persistedNode.getId(), false, uniqueNode.outgoingNeighbours(), outgoingLinks);
-
-            final var updateVo = ClassNodeVo.builder()
-                .withId(persistedNode.getId())
-                .withUri(persistedNode.getUri())
-                .withClassLabels(uniqueNode.classLabels())
-                .build();
-
-            neo4jTemplate.saveAs(updateVo, ClassNodePropertiesProjection.class);
-        }
-        catch (final Exception exception)
-        {
-            classNodeRepository.deleteById(persistedNode.getId());
-            throw new ClassNodeException("Failed to save node with uri: %s, rollback.".formatted(persistedNode.getUri()), DATABASE_INTERNAL_ERROR);
-        }
+        final var persistedNode = classNodeNeo4jDriverRepository.save(uniqueNode);
 
         return findById(persistedNode.getId())
             .orElseThrow(() -> new IllegalStateException("Class node with ID: %s is not found after after being saved.".formatted(persistedNode.getId())));
@@ -279,56 +250,5 @@ public class ClassNodeServiceImpl implements ClassNodeService
             .withRelationshipTypes(relationshipTypes)
             .withNodeLabels(labels)
             .build();
-    }
-
-    void handleRelationshipDiff(final long nodeId,
-                                final boolean isIncoming,
-                                final Map<Long, List<String>> updateLinks,
-                                final Set<RelationshipVo> originalLinks)
-    {
-        final var update = updateLinks
-            .entrySet().stream()
-            .flatMap(neighbour -> neighbour.getValue().stream()
-                .map(relationship -> RelationshipVo.builder()
-                    .withRelationship(relationship)
-                    .withDestinationId(isIncoming ? nodeId : neighbour.getKey())
-                    .withSourceId(isIncoming ? neighbour.getKey() : nodeId)
-                    .build()))
-            .collect(Collectors.toSet());
-
-        final var toDelete = originalLinks.stream()
-            .filter(incoming -> !update.contains(incoming))
-            .toList();
-
-        final var toCreate = update.stream()
-            .filter(incoming -> !originalLinks.contains(incoming))
-            .toList();
-
-        relationshipNeo4jDriverRepository.save(toCreate);
-        relationshipNeo4jDriverRepository.delete(toDelete);
-    }
-
-    private ClassNodeProjection saveIfNotPersisted(final ClassNode node)
-    {
-        final var nodeVo = classNodeVoMapper.mapToVo(node);
-        final var persistedNode = getPersistedNode(nodeVo);
-
-        return classNodeRepository.findProjectionById(persistedNode.getId())
-            .orElseThrow(() -> new ClassNodeException("Node with ID: %s, does not exist.".formatted(persistedNode.getId()), INVALID_NODE_ID));
-    }
-
-    private ClassNodeVo getPersistedNode(final ClassNodeVo nodeVo)
-    {
-        if (nodeVo.getId() == null)
-        {
-            classNodeRepository.findByUriIs(nodeVo.getUri())
-                .ifPresent(alreadyExistingNode -> {
-                    throw new ClassNodeException("Node with uri: %s, already exists. Can not be created.", INVALID_REQUEST);
-                });
-
-            return classNodeNeo4jDriverRepository.create(nodeVo);
-        }
-
-        return nodeVo;
     }
 }

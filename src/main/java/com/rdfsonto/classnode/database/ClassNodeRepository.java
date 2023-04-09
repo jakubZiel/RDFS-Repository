@@ -97,6 +97,4 @@ public interface ClassNodeRepository extends Neo4jRepository<ClassNodeVo, Long>
     Optional<ClassNodeProjection> findProjectionById(Long id);
 
     Optional<ClassNodeProjection> findByUriIs(String uri);
-
-    ClassNodeProjection save(ClassNodeProjection classNodeProjection);
 }
