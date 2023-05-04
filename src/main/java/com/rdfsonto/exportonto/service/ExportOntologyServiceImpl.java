@@ -9,6 +9,7 @@ import java.nio.file.Path;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.rdfsonto.classnode.database.ClassNodeRepository;
 import com.rdfsonto.classnode.service.UniqueUriIdHandler;
@@ -19,6 +20,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
+@Transactional
 @RequiredArgsConstructor
 class ExportOntologyServiceImpl implements ExportOntologyService
 {
@@ -28,7 +30,7 @@ class ExportOntologyServiceImpl implements ExportOntologyService
     @Value("${rdf4j.downloader.workspace}")
     private String WORKSPACE_DIR;
     private final ClassNodeRepository classNodeRepository;
-    private final Neo4jRDFClient neo4jRDFClient;
+    private final Neo4jGraphSerializer neo4JGraphSerializer;
     private final RDFExporter rdfExporter;
     private final UniqueUriIdHandler uniqueUriIdHandler;
 
@@ -44,7 +46,7 @@ class ExportOntologyServiceImpl implements ExportOntologyService
 
         if (projectNodesCount <= MAX_NODES_CHUNK)
         {
-            final var serializedRDFGraph = neo4jRDFClient.serializeNeo4jGraphToRDF(projectLabel, rdfFormat);
+            final var serializedRDFGraph = neo4JGraphSerializer.serializeNeo4jGraphToRDF(projectLabel, rdfFormat);
             final var savedFile = saveToFile(serializedRDFGraph, ontologyTag);
 
             extractedOntologyBuilder.withPath(savedFile);
@@ -53,7 +55,7 @@ class ExportOntologyServiceImpl implements ExportOntologyService
         {
             // TODO take care of bigger files
             // TODO: https://stackoverflow.com/questions/57289877/how-to-paginate-results-of-cypher-neo4j
-            final var savedFile = neo4jRDFClient.serializeBigNeo4jGraphToRDF(ontologyTag, rdfFormat);
+            final var savedFile = neo4JGraphSerializer.serializeBigNeo4jGraphToRDF(ontologyTag, rdfFormat);
             extractedOntologyBuilder.withPath(savedFile);
         }
 

@@ -18,4 +18,8 @@ public class UniqueUriIdHandler
     {
         return classNode.uri().replaceFirst(UNIQUE_URI_REGEX, "");
     }
+
+    public String removeUniqueness(final String uniqueUri) {
+        return uniqueUri.replaceFirst(UNIQUE_URI_REGEX, "");
+    }
 }

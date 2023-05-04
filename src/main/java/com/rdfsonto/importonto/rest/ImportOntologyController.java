@@ -41,7 +41,6 @@ public class ImportOntologyController
                 rdfFormat,
                 importOntologyRequest.userId(),
                 importOntologyRequest.projectId()));
-
     }
 
     @ExceptionHandler(ImportOntologyException.class)

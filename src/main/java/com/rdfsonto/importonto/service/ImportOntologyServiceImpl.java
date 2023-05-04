@@ -9,14 +9,19 @@ import static com.rdfsonto.importonto.service.ImportOntologyErrorCode.INVALID_US
 import java.io.IOException;
 import java.net.URL;
 import java.nio.file.Path;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.rdfsonto.classnode.service.UniqueUriIdHandler;
 import com.rdfsonto.importonto.database.ImportOntologyRepository;
 import com.rdfsonto.importonto.database.ImportOntologyResult;
+import com.rdfsonto.prefix.service.PrefixNodeService;
 import com.rdfsonto.project.database.ProjectNode;
 import com.rdfsonto.project.service.ProjectService;
 import com.rdfsonto.user.service.UserService;
@@ -36,6 +41,8 @@ class ImportOntologyServiceImpl implements ImportOntologyService
     private final UserService userService;
     private final ImportOntologyRepository importOntologyRepository;
     private final ProjectService projectService;
+    private final PrefixNodeService prefixNodeService;
+    private final UniqueUriIdHandler uniqueUriIdHandler;
 
     @Override
     public ImportOntologyResult importOntology(final URL source, final RDFFormat rdfFormat, final Long userId, final Long projectId)
@@ -78,6 +85,7 @@ class ImportOntologyServiceImpl implements ImportOntologyService
         try
         {
             rdf4jDownloader.prepareRDFFileToMergeIntoNeo4j(source, outputFile, ontologyTag, rdfFormat);
+            importPrefixes(rdf4jDownloader, project.getId());
 
             return DownloadedOntology.builder()
                 .withPath(outputFile)
@@ -100,8 +108,41 @@ class ImportOntologyServiceImpl implements ImportOntologyService
         return importOntologyRepository.importOntology(path, rdfFormat);
     }
 
+    private void importPrefixes(final RDFImporter rdf4jDownloader, final long projectId)
+    {
+        final var importNamespaces = rdf4jDownloader.getLoadedNamespaces().stream()
+            .map(x -> Map.entry(x.getPrefix(), uniqueUriIdHandler.removeUniqueness(x.getName())))
+            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+        final var newNamespaces = prefixNodeService.findAll(projectId)
+            .map(namespace -> updateNamespace(namespace, importNamespaces))
+            .orElse(importNamespaces);
+
+        prefixNodeService.save(projectId, newNamespaces);
+    }
+
+    private Map<String, String> updateNamespace(final Map<String, String> currentNamespaces, final Map<String, String> updateNamespace)
+    {
+        final var modifiedDuplicates = updateNamespace.entrySet().stream()
+            .filter(namespace -> isDuplicateClashingNamespace(namespace, currentNamespaces))
+            .map(namespace -> Map.entry(namespace.getKey().concat("_dup"), namespace.getValue()))
+            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+
+        return Stream.of(currentNamespaces, modifiedDuplicates, updateNamespace)
+            .flatMap(namespace -> namespace.entrySet().stream())
+            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (original, update) -> original));
+    }
+
     private String getWorkspaceDirAbsolutePath(final String localWorkspaceDir)
     {
         return localWorkspaceDir.substring(localWorkspaceDir.indexOf("/workspace"));
+    }
+
+    private boolean isDuplicateClashingNamespace(final Map.Entry<String, String> namespace, final Map<String, String> currentNamespaces)
+    {
+        final var isDuplicate = currentNamespaces.containsKey(namespace.getKey());
+        final var isClashing = !namespace.getValue().equals(currentNamespaces.get(namespace.getKey()));
+
+        return isDuplicate && isClashing;
     }
 }

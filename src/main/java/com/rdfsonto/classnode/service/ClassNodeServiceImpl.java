@@ -11,7 +11,6 @@ import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.apache.commons.lang3.NotImplementedException;
-import org.springframework.data.neo4j.core.Neo4jTemplate;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,9 +18,6 @@ import com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepository;
 import com.rdfsonto.classnode.database.ClassNodeProjection;
 import com.rdfsonto.classnode.database.ClassNodeRepository;
 import com.rdfsonto.classnode.database.ClassNodeVo;
-import com.rdfsonto.classnode.database.ClassNodeVoMapper;
-import com.rdfsonto.classnode.database.RelationshipNeo4jDriverRepository;
-import com.rdfsonto.classnode.database.RelationshipVoMapper;
 import com.rdfsonto.project.service.ProjectService;
 
 import lombok.RequiredArgsConstructor;
@@ -40,13 +36,14 @@ public class ClassNodeServiceImpl implements ClassNodeService
     private final ClassNodeMapper classNodeMapper;
     private final ProjectService projectService;
     private final UriUniquenessHandler uriHandler;
+    private final ClassNodeValidator classNodeValidator;
 
     @Override
     public List<ClassNode> findByIds(final List<Long> ids)
     {
-        final var notHydratedNodes = classNodeRepository.findAllById(ids);
+        final var projectedNodes = classNodeRepository.findAllByIdIn(ids);
 
-        if (notHydratedNodes.size() != ids.size())
+        if (projectedNodes.size() != ids.size())
         {
             throw new IllegalStateException("Not all nodes exist");
         }
@@ -58,6 +55,14 @@ public class ClassNodeServiceImpl implements ClassNodeService
 
         final var groupedIncoming = incoming.stream().collect(Collectors.groupingBy(ClassNodeVo::getSource));
         final var groupedOutgoing = outgoing.stream().collect(Collectors.groupingBy(ClassNodeVo::getSource));
+
+        final var notHydratedNodes = projectedNodes.stream()
+            .map(projectedNode -> ClassNodeVo.builder()
+                .withId(projectedNode.getId())
+                .withUri(projectedNode.getUri())
+                .withClassLabels(projectedNode.getClassLabels())
+                .build())
+            .toList();
 
         notHydratedNodes.forEach(node -> {
             final var props = properties.get(node.getId());
@@ -96,10 +101,11 @@ public class ClassNodeServiceImpl implements ClassNodeService
                 "Project with ID: %s does not exist, can not filter nodes.".formatted(projectId),
                 INVALID_PROJECT_ID));
 
-        // TODO apply filter for projectTags
         final var projectTag = projectService.getProjectTag(project);
+        final var uniqueFilters = uriHandler.applyUniqueness(filters, projectTag);
+        final var uniqueLabels = uriHandler.addUniqueLabel(labels, projectTag);
 
-        final var nodeIds = classNodeNeo4jDriverRepository.findAllNodeIdsByPropertiesAndLabels(labels, filters);
+        final var nodeIds = classNodeNeo4jDriverRepository.findAllNodeIdsByPropertiesAndLabels(uniqueLabels, uniqueFilters);
 
         return findByIds(nodeIds);
     }
@@ -182,6 +188,8 @@ public class ClassNodeServiceImpl implements ClassNodeService
     @Override
     public ClassNode save(final ClassNode nodeToSave, final long projectId)
     {
+        classNodeValidator.validate(nodeToSave);
+
         final var project = projectService.findById(projectId)
             .orElseThrow(() ->
                 new ClassNodeException("Can not save class node in non-existing project with ID: %s".formatted(projectId),
@@ -206,10 +214,11 @@ public class ClassNodeServiceImpl implements ClassNodeService
     @Override
     public void deleteById(final long id)
     {
-        classNodeRepository.findById(id)
+        classNodeRepository.findProjectionById(id)
             .orElseThrow(() ->
                 new ClassNodeException("Class node with ID: %s can not be deleted, because it does not exist.".formatted(id),
                     INVALID_NODE_ID));
+
         classNodeRepository.deleteById(id);
     }
 
@@ -232,8 +241,9 @@ public class ClassNodeServiceImpl implements ClassNodeService
             .orElseThrow(() -> new ClassNodeException("Not mete data for non existing project with ID: %s".formatted(projectId), INVALID_PROJECT_ID));
 
         final var projectTag = projectService.getProjectTag(project);
+        final var projectLabel = uriHandler.getClassNodeLabel(projectTag);
 
-        final var propertyKeys = classNodeRepository.findAllPropertyKeys(projectTag).stream()
+        final var propertyKeys = classNodeRepository.findAllPropertyKeys(projectLabel).stream()
             .filter(property -> property.startsWith("http") || property.equals("uri"))
             .toList();
 

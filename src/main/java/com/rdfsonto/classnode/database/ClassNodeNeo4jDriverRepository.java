@@ -18,8 +18,10 @@ import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemp
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.SOURCE_NODE_ID_RECORD_KEY;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.URI_KEY;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -198,10 +200,20 @@ public class ClassNodeNeo4jDriverRepository
         final var whereClause = "WHERE ";
 
         final var propertiesConditionStatement = propertyFilters.stream()
-            .map(filter -> "node.`%s` %s '%s'".formatted(filter.property(), filter.operator(), filter.value()))
+            .map(filter -> "node.`%s` %s '%s'".formatted(filter.property(), buildOperator(filter.operator()), filter.value()))
             .collect(Collectors.joining(AND + Strings.LINE_SEPARATOR));
 
         return String.join(Strings.LINE_SEPARATOR, List.of(whereClause, propertiesConditionStatement));
+    }
+
+    private String buildOperator(final FilterCondition.Operator operator)
+    {
+        if (operator == FilterCondition.Operator.EQUALS)
+        {
+            return "=";
+        }
+
+        return operator.toString();
     }
 
     private void handleRelationshipDiff(final long nodeId,
@@ -210,7 +222,8 @@ public class ClassNodeNeo4jDriverRepository
                                         final Set<RelationshipVo> originalLinks,
                                         final Transaction transaction)
     {
-        final var update = updateLinks
+        final var update = Optional.ofNullable(updateLinks)
+            .orElse(Collections.emptyMap())
             .entrySet().stream()
             .flatMap(neighbour -> neighbour.getValue().stream()
                 .map(relationship -> RelationshipVo.builder()

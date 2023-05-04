@@ -42,10 +42,10 @@ public class ExportOntologyController
             return ResponseEntity.badRequest().body("invalid_request");
         }
 
-        final var project = projectService.findProjectByNameAndUserId(exportOntologyRequest.projectName(), exportOntologyRequest.userId());
+        final var project = projectService.findById(exportOntologyRequest.projectId());
         if (project.isEmpty())
         {
-            log.warn("Invalid export ontology name: {}, ontology does not exist", exportOntologyRequest.projectName());
+            log.warn("Invalid export ontology id: {}, ontology does not exist", exportOntologyRequest.projectId());
             return ResponseEntity.badRequest().body("invalid_project_name");
         }
 
@@ -110,7 +110,7 @@ public class ExportOntologyController
 
     private boolean isInvalid(final ExportOntologyRequest request)
     {
-        return (request.projectName() == null ||
+        return (request.projectId() == null ||
             request.userId() == null ||
             request.fileName() == null ||
             request.rdfFormat() == null);

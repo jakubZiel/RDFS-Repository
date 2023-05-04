@@ -11,6 +11,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Namespace;
 import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Value;
@@ -37,6 +38,11 @@ public class RDFImporter extends RDFInputOutput
         downloadFile(inputURL, outputFile);
         loadModel(outputFile, rdfFormat);
         saveMergeReadyModel(outputFile, rdfFormat, tag);
+    }
+
+    public Set<Namespace> getLoadedNamespaces()
+    {
+        return outModel.getNamespaces();
     }
 
     private void downloadFile(final URL inputURL, final Path outputFile) throws IOException

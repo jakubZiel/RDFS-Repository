@@ -1,8 +1,9 @@
 package com.rdfsonto.classnode.service;
 
+import lombok.Builder;
 import lombok.RequiredArgsConstructor;
 
-
+@Builder(setterPrefix = "with", toBuilder = true)
 public record FilterCondition(String value, String property, Operator operator)
 {
     @RequiredArgsConstructor

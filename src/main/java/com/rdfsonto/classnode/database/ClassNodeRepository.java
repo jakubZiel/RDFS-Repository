@@ -60,6 +60,7 @@ public interface ClassNodeRepository extends Neo4jRepository<ClassNodeVo, Long>
         """)
     List<Object> getAllNodeValues(@Param("nodeId") long id);
 
+    // TODO needs to be cached, and changed to go after all nodes
     @Query("""
         CALL db.relationshipTypes()
         YIELD relationshipType
@@ -74,12 +75,14 @@ public interface ClassNodeRepository extends Neo4jRepository<ClassNodeVo, Long>
          """)
     List<String> findAllLabels(String projectTag);
 
+    // TODO needs to be cached
     @Query("""
-        CALL db.propertyKeys()
-        YIELD propertyKey
-        RETURN propertyKey
+        MATCH(n:Resource)
+        WITH DISTINCT(keys(n)) as key_sets
+        UNWIND (key_sets) as keys
+        return DISTINCT(keys) as key
         """)
-    List<String> findAllPropertyKeys(String projectTag);
+    List<String> findAllPropertyKeys(@Param("label") String label);
 
     @Query("""
         MATCH (n:Resource)
@@ -95,4 +98,6 @@ public interface ClassNodeRepository extends Neo4jRepository<ClassNodeVo, Long>
     Optional<ClassNodeProjection> findByUri(String uri);
 
     Optional<ClassNodeProjection> findProjectionById(Long id);
+
+    List<ClassNodePropertiesProjection> findAllByIdIn(final List<Long> ids);
 }
