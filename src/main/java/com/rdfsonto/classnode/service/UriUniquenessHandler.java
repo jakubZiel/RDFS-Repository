@@ -16,7 +16,7 @@ import lombok.RequiredArgsConstructor;
 public class UriUniquenessHandler
 {
     private static final String URI_KEY = "uri";
-    private static final String USER_NAMESPACE_LABEL_PREFIX = "https://www.user_neo4j.com";
+    private static final String USER_NAMESPACE_LABEL_PREFIX = "http://www.user_neo4j.com";
     private final UniqueUriIdHandler uniqueUriIdHandler;
 
     public ClassNode removeUniqueness(final ClassNode uniqueUriClassNode)

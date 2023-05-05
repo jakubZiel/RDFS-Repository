@@ -26,6 +26,13 @@ import com.rdfsonto.rdf4j.RDFInputOutput;
 @Component
 public class RDFExporter extends RDFInputOutput
 {
+
+    private static final Set<String> KNOWN_NAMESPACES = Set.of("http://www.w3.org/2002/07/owl#",
+        "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+        "http://www.w3.org/2000/01/rdf-schema#",
+        "http://www.user_neo4j.com#",
+        "http://www.w3.org/XML/1998/namespace");
+
     public void prepareRDFFileForExport(final Path inputFile, final String tag, final RDFFormat rdfFormat) throws IOException
     {
         outModel = new ModelBuilder().build();
@@ -53,6 +60,9 @@ public class RDFExporter extends RDFInputOutput
                 );
             }
         });
+
+        knownNamespaces.clear();
+        knownNamespaces.addAll(KNOWN_NAMESPACES);
 
         model.forEach(statement -> {
             final var untaggedStatement = untagStatement(statement, tag);

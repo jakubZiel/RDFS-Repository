@@ -1,10 +1,12 @@
 package com.rdfsonto.exportonto.service;
 
 import java.io.BufferedInputStream;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.Set;
 
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.springframework.beans.factory.annotation.Value;
@@ -25,7 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 class ExportOntologyServiceImpl implements ExportOntologyService
 {
     private static final long MAX_NODES_CHUNK = 1000;
-    private static final String PROJECT_LABEL_ROOT = "https://www.user_neo4j.com#";
+    private static final String PROJECT_LABEL_ROOT = "http://www.user_neo4j.com#";
 
     @Value("${rdf4j.downloader.workspace}")
     private String WORKSPACE_DIR;
@@ -69,7 +71,9 @@ class ExportOntologyServiceImpl implements ExportOntologyService
 
         try
         {
-            rdfExporter.prepareRDFFileForExport(extractedOntology.path(), ontologyTag, extractedOntology.rdfFormat());
+            final var absolutePath = new File(extractedOntology.path().toString()).getCanonicalPath();
+
+            rdfExporter.prepareRDFFileForExport(Path.of(absolutePath), ontologyTag, extractedOntology.rdfFormat());
 
             final var inputStream = new BufferedInputStream(new FileInputStream(extractedOntology.path().toFile()));
             final var file = extractedOntology.path().toFile();
@@ -97,7 +101,7 @@ class ExportOntologyServiceImpl implements ExportOntologyService
             fileWriter.write(serializedGraph);
             fileWriter.close();
 
-            return filePath;
+            return filePath.toAbsolutePath();
         }
         catch (final IOException e)
         {

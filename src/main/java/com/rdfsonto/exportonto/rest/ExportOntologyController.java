@@ -34,7 +34,7 @@ public class ExportOntologyController
     private final WorkspaceManagementService workspaceManagementService;
 
     @PostMapping
-    public ResponseEntity<?> exportRDFResource(final ExportOntologyRequest exportOntologyRequest, final HttpServletResponse response)
+    public ResponseEntity<?> exportRdfResource(final ExportOntologyRequest exportOntologyRequest, final HttpServletResponse response)
     {
         if (isInvalid(exportOntologyRequest))
         {

@@ -17,7 +17,7 @@ import org.eclipse.rdf4j.rio.Rio;
 
 public abstract class RDFInputOutput
 {
-    protected final String USER_NAMESPACE = "https://www.user_neo4j.com#";
+    protected final String USER_NAMESPACE = "http://www.user_neo4j.com#";
     protected final String USER_NAMESPACE_PREFIX = "un";
 
     protected Model model;
