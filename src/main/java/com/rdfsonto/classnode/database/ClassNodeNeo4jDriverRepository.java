@@ -3,6 +3,7 @@ package com.rdfsonto.classnode.database;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.AND;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.CLEAR_PROPERTIES_TEMPLATE;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.CREATE_NODE_TEMPLATE;
+import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.DELETE_ALL_RESOURCE_NODES_WITH_LABEL_TEMPLATE;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.FIND_ALL_NODE_PROPERTIES_QUERY_TEMPLATE;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.INCOMING_NEIGHBOURS_QUERY_TEMPLATE;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.MATCH_NODE_TEMPLATE;
@@ -32,8 +33,11 @@ import org.neo4j.driver.Query;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.Value;
 import org.neo4j.driver.exceptions.Neo4jException;
+import org.springframework.data.neo4j.core.Neo4jTemplate;
+import org.springframework.data.neo4j.repository.query.QueryFragmentsAndParameters;
 import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.rdfsonto.classnode.service.ClassNode;
 import com.rdfsonto.classnode.service.FilterCondition;
@@ -49,6 +53,7 @@ public class ClassNodeNeo4jDriverRepository
 {
 
     private final Driver driver;
+    private final Neo4jTemplate neo4jTemplate;
     private final RelationshipNeo4jDriverRepository relationshipNeo4jDriverRepository;
     private final ClassNodeRepository classNodeRepository;
 
@@ -145,6 +150,13 @@ public class ClassNodeNeo4jDriverRepository
         {
             return null;
         }
+    }
+
+    @Transactional
+    public void deleteAllNodesByProjectLabel(final String projectLabel)
+    {
+        final var query = DELETE_ALL_RESOURCE_NODES_WITH_LABEL_TEMPLATE.formatted(projectLabel);
+        neo4jTemplate.toExecutableQuery(ClassNodeVo.class, new QueryFragmentsAndParameters(query, Map.of())).getResults();
     }
 
     private List<ClassNodeVo> findNeighbours(final List<Long> ids, final RelationshipDirection relationshipDirection)

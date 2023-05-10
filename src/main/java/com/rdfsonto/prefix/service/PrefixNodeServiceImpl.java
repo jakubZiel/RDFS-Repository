@@ -29,7 +29,7 @@ public class PrefixNodeServiceImpl implements PrefixNodeService
     private final UriUniquenessHandler uriHandler;
 
     @Override
-    public Optional<Map<String, String>> findAll(final long projectId)
+    public Optional<PrefixMapping> findAll(final long projectId)
     {
         projectService.findById(projectId)
             .orElseThrow(() -> new ClassNodeException("Prefixes for project ID %s can not be deleted, because it does not exist.".formatted(projectId),
@@ -40,11 +40,15 @@ public class PrefixNodeServiceImpl implements PrefixNodeService
                 .filter(namespace -> !KnownPrefix.UN.getPrefix().equals(namespace.getKey()))
                 .map(namespace -> Map.entry(namespace.getKey(), uriHandler.removeUniqueness(namespace.getValue())))
                 .map(this::endNamespaceWithHash)
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)))
+            .map(prefixToUri -> PrefixMapping.builder()
+                .withPrefixToUri(prefixToUri)
+                .withUriToPrefix(uriToPrefix(prefixToUri))
+                .build());
     }
 
     @Override
-    public Map<String, String> save(final long projectId, final Map<String, String> updatePrefixes)
+    public PrefixMapping save(final long projectId, final Map<String, String> updatePrefixes)
     {
         final var project = projectService.findById(projectId)
             .orElseThrow(() -> new ClassNodeException("Prefixes for project ID %s can not be deleted, because it does not exist.".formatted(projectId),
@@ -65,7 +69,11 @@ public class PrefixNodeServiceImpl implements PrefixNodeService
             .withPrefixes(uniquePrefixes)
             .build();
 
-        return prefixNodeRepository.save(updatePrefix).getPrefixes();
+        prefixNodeRepository.deleteByProjectId(projectId);
+        prefixNodeRepository.save(updatePrefix);
+
+        return findAll(projectId).orElseThrow(() ->
+            new IllegalStateException("Could not find a prefix node for project ID: %s after save.".formatted(projectId)));
     }
 
     @Override
@@ -84,5 +92,11 @@ public class PrefixNodeServiceImpl implements PrefixNodeService
         final var unifiedName = name.charAt(name.length() - 1) != '#' ? name + "#" : name;
 
         return Map.entry(namespace.getKey(), unifiedName);
+    }
+
+    private Map<String, String> uriToPrefix(final Map<String, String> prefixToUri)
+    {
+        return prefixToUri.entrySet().stream()
+            .collect(Collectors.toMap(Map.Entry::getValue, Map.Entry::getKey));
     }
 }

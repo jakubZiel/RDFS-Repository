@@ -6,10 +6,11 @@ import java.util.Optional;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.rdfsonto.classnode.service.ClassNodeService;
+import com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepository;
 import com.rdfsonto.classnode.service.UniqueUriIdHandler;
+import com.rdfsonto.classnode.service.UriUniquenessHandler;
 import com.rdfsonto.infrastructure.security.service.AuthService;
-import com.rdfsonto.prefix.service.PrefixNodeService;
+import com.rdfsonto.prefix.database.PrefixNodeRepository;
 import com.rdfsonto.project.database.ProjectNode;
 import com.rdfsonto.project.database.ProjectRepository;
 import com.rdfsonto.user.database.UserNode;
@@ -26,9 +27,12 @@ import lombok.extern.slf4j.Slf4j;
 public class ProjectServiceImpl implements ProjectService
 {
     private final AuthService authService;
+    private final PrefixNodeRepository prefixNodeRepository;
     private final ProjectRepository projectRepository;
+    private final ClassNodeNeo4jDriverRepository classNodeNeo4jDriverRepository;
     private final UserService userService;
     private final UniqueUriIdHandler uniqueUriIdHandler;
+    private final UriUniquenessHandler uriUniquenessHandler;
 
     @Override
     public Optional<ProjectNode> findById(final long projectId)
@@ -83,7 +87,11 @@ public class ProjectServiceImpl implements ProjectService
             return;
         }
 
+        final var projectLabel = uriUniquenessHandler.getClassNodeLabel(getProjectTag(project));
+
         projectRepository.delete(project);
+        classNodeNeo4jDriverRepository.deleteAllNodesByProjectLabel(projectLabel);
+        prefixNodeRepository.deleteByProjectId(project.getId());
     }
 
     @Override

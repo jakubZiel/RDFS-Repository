@@ -6,9 +6,9 @@ import java.util.Optional;
 
 public interface PrefixNodeService
 {
-    Optional<Map<String, String>> findAll(long projectId);
+    Optional<PrefixMapping> findAll(long projectId);
 
-    Map<String, String> save(long projectId, Map<String, String> prefixes);
+    PrefixMapping save(long projectId, Map<String, String> prefixes);
 
     void delete(long projectId);
 }

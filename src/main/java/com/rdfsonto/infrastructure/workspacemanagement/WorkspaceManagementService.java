@@ -1,9 +1,9 @@
 package com.rdfsonto.infrastructure.workspacemanagement;
 
-import java.nio.file.Path;
+import java.util.UUID;
 
 
 public interface WorkspaceManagementService
 {
-    void clearWorkspace(Path file);
+    void clearWorkspace(UUID exportId);
 }

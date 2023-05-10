@@ -6,23 +6,19 @@ import java.util.Optional;
 
 public interface ClassNodeService
 {
-    List<ClassNode> findByIds(List<Long> ids);
+    List<ClassNode> findByIds(long projectId, List<Long> ids);
 
-    List<ClassNode> findByPropertyValue(long projectId, String propertyKey, String value);
+    List<ClassNode> findByPropertiesAndLabels(long projectId, List<String> labels, List<FilterCondition> filters);
 
-    List<ClassNode> findByPropertiesAndLabels(final long projectId, final List<String> labels, final List<FilterCondition> filters);
+    Optional<ClassNode> findById(long projectId, Long id);
 
-    Optional<ClassNode> findById(Long id);
+    List<ClassNode> findNeighboursByUri(long projectId, String nodeUri, int maxDistance, List<String> allowedRelationships);
 
-    List<ClassNode> findNeighboursByUri(String nodeUri, long projectId, int maxDistance, List<String> allowedRelationships);
+    List<ClassNode> findNeighbours(long projectId, long id, int maxDistance, List<String> allowedRelationships);
 
-    List<ClassNode> findNeighbours(long id, int maxDistance, List<String> allowedRelationships);
-
-    ClassNode save(ClassNode node, long projectId);
+    ClassNode save(long projectId, ClassNode node);
 
     void deleteById(long id);
-
-    void deleteAll(long projectId);
 
     ProjectNodeMetadata findProjectNodeMetaData(long projectId);
 }

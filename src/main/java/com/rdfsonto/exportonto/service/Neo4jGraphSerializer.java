@@ -1,6 +1,6 @@
 package com.rdfsonto.exportonto.service;
 
-import java.nio.file.Path;
+import static org.eclipse.rdf4j.rio.RDFFormat.TURTLE;
 
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.springframework.stereotype.Component;
@@ -21,18 +21,17 @@ public class Neo4jGraphSerializer
 
     private final Neo4jRdfClient client;
 
-    public String serializeNeo4jGraphToRDF(final String projectTag, final RDFFormat rdfFormat)
+    public String serializeNeo4jGraphToRDF(final String projectTag)
     {
         final var request = GraphSerializeRequest.builder()
             .withCypher(GET_PROJECT_NODES_QUERY_TEMPLATE.formatted(projectTag))
-            .withFormat(rdfFormat.getName())
+            .withFormat(TURTLE.getName())
             .build();
 
         return client.serializeGraphToRdf(request);
     }
 
-    public Path serializeBigNeo4jGraphToRDF(final String projectTag, final RDFFormat rdfFormat)
+    public void serializeBigNeo4jGraphToRDF(final String projectTag, final RDFFormat rdfFormat)
     {
-        return null;
     }
 }

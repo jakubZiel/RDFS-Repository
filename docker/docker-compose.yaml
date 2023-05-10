@@ -15,6 +15,7 @@ services:
       - ../workspace:/workspace
     environment:
       - NEO4JLABS_PLUGINS=["apoc", "n10s"]
+      - NEO4J_AUTH=neo4j/kuba123
     
   postgres:
     image: postgres:13.2

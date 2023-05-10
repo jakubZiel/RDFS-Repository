@@ -3,7 +3,10 @@ package com.rdfsonto.infrastructure.workspacemanagement;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 
 import lombok.extern.slf4j.Slf4j;
@@ -13,16 +16,32 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 public class WorkspaceManagementServiceImpl implements WorkspaceManagementService
 {
+    @Value("${rdf4j.downloader.workspace}")
+    private String WORKSPACE_DIR;
+
     @Override
-    public void clearWorkspace(final Path filePath)
+    public void clearWorkspace(final UUID exportId)
     {
-        try
+        try (final var filePaths = Files.list(Path.of(WORKSPACE_DIR)))
         {
-            Files.deleteIfExists(filePath);
+            filePaths.filter(path -> path.getFileName().toString().startsWith(exportId.toString()))
+                .forEach(this::deleteFile);
         }
         catch (IOException e)
         {
-            log.error("Failed to delete file: {}", filePath);
+            log.error("Failed to delete files for export ID: {}", exportId);
+        }
+    }
+
+    private void deleteFile(final Path path)
+    {
+        try
+        {
+            Files.deleteIfExists(path);
+        }
+        catch (IOException e)
+        {
+            log.error("Failed to delete file: {}.", path);
         }
     }
 }

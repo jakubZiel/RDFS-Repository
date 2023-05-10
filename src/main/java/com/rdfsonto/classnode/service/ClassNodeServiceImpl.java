@@ -14,6 +14,7 @@ import org.apache.commons.lang3.NotImplementedException;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.github.jsonldjava.shaded.com.google.common.collect.Streams;
 import com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepository;
 import com.rdfsonto.classnode.database.ClassNodeProjection;
 import com.rdfsonto.classnode.database.ClassNodeRepository;
@@ -30,16 +31,20 @@ import lombok.extern.slf4j.Slf4j;
 @Transactional(noRollbackFor = ClassNodeException.class)
 public class ClassNodeServiceImpl implements ClassNodeService
 {
+    private static final String USER_NAMESPACE_LABEL_PREFIX = "http://www.user_neo4j.com";
     private final static long MAX_NUMBER_OF_NEIGHBOURS = 1000;
+
+    private final ProjectService projectService;
     private final ClassNodeRepository classNodeRepository;
     private final ClassNodeNeo4jDriverRepository classNodeNeo4jDriverRepository;
     private final ClassNodeMapper classNodeMapper;
-    private final ProjectService projectService;
     private final UriUniquenessHandler uriHandler;
+    private final PrefixHandler prefixHandler;
+    private final RemovePrefixHandler removePrefixHandler;
     private final ClassNodeValidator classNodeValidator;
 
     @Override
-    public List<ClassNode> findByIds(final List<Long> ids)
+    public List<ClassNode> findByIds(final long projectId, final List<Long> ids)
     {
         final var projectedNodes = classNodeRepository.findAllByIdIn(ids);
 
@@ -49,7 +54,7 @@ public class ClassNodeServiceImpl implements ClassNodeService
         }
 
         final var properties = classNodeNeo4jDriverRepository.findAllNodeProperties(ids);
-        // TODO : Check if it works for ids : 11, 7, 3 ,1
+
         final var incoming = classNodeNeo4jDriverRepository.findAllIncomingNeighbours(ids);
         final var outgoing = classNodeNeo4jDriverRepository.findAllOutgoingNeighbours(ids);
 
@@ -69,28 +74,15 @@ public class ClassNodeServiceImpl implements ClassNodeService
             node.setProperties(props);
         });
 
-        return notHydratedNodes.stream()
+        final var nonPrefixedNodes = notHydratedNodes.stream()
             .map(node ->
                 classNodeMapper.mapToDomain(node,
                     groupedIncoming.get(node.getId()),
                     groupedOutgoing.get(node.getId())))
             .map(uriHandler::removeUniqueness)
             .toList();
-    }
 
-    @Override
-    public List<ClassNode> findByPropertyValue(final long projectId, final String propertyKey, final String value)
-    {
-        final var project = projectService.findById(projectId)
-            .orElseThrow(() -> new IllegalStateException("Project id: %s does not exist".formatted(projectId)));
-
-        final var projectTag = projectService.getProjectTag(project);
-
-        final var nodeIds = classNodeRepository.findAllClassNodesByPropertyValue(propertyKey, value, projectTag).stream()
-            .map(ClassNodeVo::getId)
-            .toList();
-
-        return findByIds(nodeIds);
+        return prefixHandler.applyPrefix(nonPrefixedNodes, projectId);
     }
 
     @Override
@@ -101,17 +93,22 @@ public class ClassNodeServiceImpl implements ClassNodeService
                 "Project with ID: %s does not exist, can not filter nodes.".formatted(projectId),
                 INVALID_PROJECT_ID));
 
+        final var nonPrefixedLabels = removePrefixHandler.removePrefix(labels, projectId);
+        final var nonPrefixedProperties = removePrefixHandler.removePrefix(filters.stream().map(FilterCondition::property).toList(), projectId);
+        final var nonPrefixedFilters = Streams.zip(filters.stream(), nonPrefixedProperties.stream(),
+            (filter, prefixedProp) -> filter.toBuilder().withProperty(prefixedProp).build()).toList();
+
         final var projectTag = projectService.getProjectTag(project);
-        final var uniqueFilters = uriHandler.applyUniqueness(filters, projectTag);
-        final var uniqueLabels = uriHandler.addUniqueLabel(labels, projectTag);
+        final var uniqueFilters = uriHandler.applyUniqueness(nonPrefixedFilters, projectTag);
+        final var uniqueLabels = uriHandler.addUniqueLabel(nonPrefixedLabels, projectTag);
 
         final var nodeIds = classNodeNeo4jDriverRepository.findAllNodeIdsByPropertiesAndLabels(uniqueLabels, uniqueFilters);
 
-        return findByIds(nodeIds);
+        return findByIds(projectId, nodeIds);
     }
 
     @Override
-    public Optional<ClassNode> findById(final Long id)
+    public Optional<ClassNode> findById(final long projectId, final Long id)
     {
         final var notHydratedNodeProjection = classNodeRepository.findProjectionById(id);
 
@@ -135,41 +132,43 @@ public class ClassNodeServiceImpl implements ClassNodeService
         final var outgoing = classNodeNeo4jDriverRepository.findAllOutgoingNeighbours(nodeId);
 
         return Optional.of(classNodeMapper.mapToDomain(notHydratedNode, incoming, outgoing))
-            .map(uriHandler::removeUniqueness);
+            .map(uriHandler::removeUniqueness)
+            .map(node -> prefixHandler.applyPrefix(node, projectId));
     }
 
     @Override
-    public List<ClassNode> findNeighboursByUri(final String nodeUri,
-                                               final long projectId,
+    public List<ClassNode> findNeighboursByUri(final long projectId,
+                                               final String nodeUri,
                                                final int maxDistance,
                                                final List<String> allowedRelationships)
     {
         projectService.findById(projectId)
-            .orElseThrow(() ->
-                new ClassNodeException(
-                    "Project with ID: %s does not exist, can't look for uri: %s nodeUri".formatted(projectId, nodeUri),
-                    INVALID_PROJECT_ID));
+            .orElseThrow(() -> new ClassNodeException(
+                "Project with ID: %s does not exist, can't look for uri: %s nodeUri".formatted(projectId, nodeUri),
+                INVALID_PROJECT_ID));
 
         final var sourceNode = classNodeRepository.findByUri(nodeUri).orElseThrow(() ->
             new ClassNodeException(
                 "Node with URI: %s does not exist in project with ID: %s".formatted(nodeUri, projectId),
                 INVALID_NODE_URI));
 
-        return findNeighbours(sourceNode.getId(), maxDistance, allowedRelationships);
+        final var nonPrefixedRelationships = removePrefixHandler.removePrefix(allowedRelationships, projectId);
+
+        return findNeighbours(projectId, sourceNode.getId(), maxDistance, nonPrefixedRelationships);
     }
 
     @Override
-    public List<ClassNode> findNeighbours(final long id, final int maxDistance, final List<String> allowedRelationships)
+    public List<ClassNode> findNeighbours(final long projectId, final long nodeId, final int maxDistance, final List<String> allowedRelationships)
     {
-        classNodeRepository.findProjectionById(id)
-            .orElseThrow(() -> new ClassNodeException("Tried to get neighbours of non existing node with ID: %s".formatted(id), INVALID_NODE_ID));
+        classNodeRepository.findProjectionById(nodeId)
+            .orElseThrow(() -> new ClassNodeException("Tried to get neighbours of non existing node with ID: %s".formatted(nodeId), INVALID_NODE_ID));
 
         if (maxDistance < 0)
         {
             throw new ClassNodeException("Invalid max distance: %d".formatted(maxDistance), INVALID_MAX_DISTANCE);
         }
 
-        final var numberOfNeighbours = classNodeRepository.countAllNeighbours(maxDistance, id);
+        final var numberOfNeighbours = classNodeRepository.countAllNeighbours(maxDistance, nodeId);
 
         if (numberOfNeighbours > MAX_NUMBER_OF_NEIGHBOURS)
         {
@@ -177,16 +176,18 @@ public class ClassNodeServiceImpl implements ClassNodeService
             throw new NotImplementedException();
         }
 
-        final var neighbourIds = classNodeRepository.findAllNeighbours(maxDistance, id).stream()
+        // TODO apply relationships to findAllNeighbours
+        final var nonPrefixedRelationships = removePrefixHandler.removePrefix(allowedRelationships, projectId);
+
+        final var neighbourIds = classNodeRepository.findAllNeighbours(maxDistance, nodeId).stream()
             .map(ClassNodeProjection::getId)
             .toList();
 
-        return findByIds(neighbourIds);
+        return findByIds(projectId, neighbourIds);
     }
 
-    // TODO take care of more types of relationship coming from the same node - TEST IT!!!
     @Override
-    public ClassNode save(final ClassNode nodeToSave, final long projectId)
+    public ClassNode save(final long projectId, final ClassNode nodeToSave)
     {
         classNodeValidator.validate(nodeToSave);
 
@@ -195,7 +196,8 @@ public class ClassNodeServiceImpl implements ClassNodeService
                 new ClassNodeException("Can not save class node in non-existing project with ID: %s".formatted(projectId),
                     INVALID_PROJECT_ID));
 
-        final var uniqueNode = uriHandler.applyUniqueness(nodeToSave, projectService.getProjectTag(project));
+        final var nonPrefixedNode = removePrefixHandler.removePrefix(nodeToSave, projectId);
+        final var uniqueNode = uriHandler.applyUniqueness(nonPrefixedNode, projectService.getProjectTag(project));
 
         Optional.of(uniqueNode)
             .filter(node -> node.id() == null)
@@ -207,7 +209,7 @@ public class ClassNodeServiceImpl implements ClassNodeService
 
         final var persistedNode = classNodeNeo4jDriverRepository.save(uniqueNode);
 
-        return findById(persistedNode.getId())
+        return findById(projectId, persistedNode.getId())
             .orElseThrow(() -> new IllegalStateException("Class node with ID: %s is not found after after being saved.".formatted(persistedNode.getId())));
     }
 
@@ -222,18 +224,7 @@ public class ClassNodeServiceImpl implements ClassNodeService
         classNodeRepository.deleteById(id);
     }
 
-    @Override
-    public void deleteAll(final long projectId)
-    {
-        final var project = projectService.findById(projectId).orElseThrow();
-        final var projectTag = projectService.getProjectTag(project);
-
-        final var classNodeLabel = uriHandler.getClassNodeLabel(projectTag);
-
-        classNodeRepository.deleteAllByClassLabels(List.of(classNodeLabel));
-        // TODO validate that deleted all class nodes for a project
-    }
-
+    //TODO apply uniqueness
     @Override
     public ProjectNodeMetadata findProjectNodeMetaData(final long projectId)
     {
@@ -248,6 +239,7 @@ public class ClassNodeServiceImpl implements ClassNodeService
             .toList();
 
         final var labels = classNodeRepository.findAllLabels(projectTag).stream()
+            .filter(label -> !label.startsWith(USER_NAMESPACE_LABEL_PREFIX))
             .filter(label -> label.startsWith("http"))
             .toList();
 
@@ -255,10 +247,12 @@ public class ClassNodeServiceImpl implements ClassNodeService
             .filter(relationship -> relationship.startsWith("http"))
             .toList();
 
-        return ProjectNodeMetadata.builder()
+        final var nonPrefixedMetadata = ProjectNodeMetadata.builder()
             .withPropertyKeys(propertyKeys)
             .withRelationshipTypes(relationshipTypes)
             .withNodeLabels(labels)
             .build();
+
+        return prefixHandler.applyPrefix(nonPrefixedMetadata, projectId);
     }
 }

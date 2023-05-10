@@ -31,6 +31,11 @@ public class ClassNodeNeo4jDriverRepositoryTemplates
         MATCH (n:Resource) WHERE id(n) = nodeId
         RETURN id(n) as id, properties(n) as properties
         """;
+
+    static final String DELETE_ALL_RESOURCE_NODES_WITH_LABEL_TEMPLATE = """
+        MATCH (n:Resource:`%s`) DETACH DELETE n
+        """;
+
     static final String NEIGHBOUR_RECORD_KEY = "neighbour";
     static final String RELATION_RECORD_KEY = "relation";
     static final String RELATIONSHIP_ID_KEY = "relationshipId";

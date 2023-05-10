@@ -115,7 +115,7 @@ class ImportOntologyServiceImpl implements ImportOntologyService
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
         final var newNamespaces = prefixNodeService.findAll(projectId)
-            .map(namespace -> updateNamespace(namespace, importNamespaces))
+            .map(prefixMapping -> updateNamespace(prefixMapping.prefixToUri(), importNamespaces))
             .orElse(importNamespaces);
 
         prefixNodeService.save(projectId, newNamespaces);
@@ -123,12 +123,7 @@ class ImportOntologyServiceImpl implements ImportOntologyService
 
     private Map<String, String> updateNamespace(final Map<String, String> currentNamespaces, final Map<String, String> updateNamespace)
     {
-        final var modifiedDuplicates = updateNamespace.entrySet().stream()
-            .filter(namespace -> isDuplicateClashingNamespace(namespace, currentNamespaces))
-            .map(namespace -> Map.entry(namespace.getKey().concat("_dup"), namespace.getValue()))
-            .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
-
-        return Stream.of(currentNamespaces, modifiedDuplicates, updateNamespace)
+        return Stream.of(currentNamespaces, updateNamespace)
             .flatMap(namespace -> namespace.entrySet().stream())
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (original, update) -> original));
     }
@@ -136,13 +131,5 @@ class ImportOntologyServiceImpl implements ImportOntologyService
     private String getWorkspaceDirAbsolutePath(final String localWorkspaceDir)
     {
         return localWorkspaceDir.substring(localWorkspaceDir.indexOf("/workspace"));
-    }
-
-    private boolean isDuplicateClashingNamespace(final Map.Entry<String, String> namespace, final Map<String, String> currentNamespaces)
-    {
-        final var isDuplicate = currentNamespaces.containsKey(namespace.getKey());
-        final var isClashing = !namespace.getValue().equals(currentNamespaces.get(namespace.getKey()));
-
-        return isDuplicate && isClashing;
     }
 }

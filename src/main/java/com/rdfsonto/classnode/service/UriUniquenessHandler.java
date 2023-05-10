@@ -44,12 +44,14 @@ public class UriUniquenessHandler
         final var nonUniqueUri = nonUniqueUriClassNode.uri();
         final var uniqueUri = applyUniqueness(nonUniqueUri, projectTag);
 
-        nonUniqueUriClassNode.classLabels().add(getClassNodeLabel(projectTag));
-        nonUniqueUriClassNode.classLabels().add("Resource");
+        final var uniqueLabelsStream = Stream.of("Resource", getClassNodeLabel(projectTag));
+        final var labelsStream = nonUniqueUriClassNode.classLabels().stream();
+
+        final var uniqueLabels = Stream.concat(uniqueLabelsStream, labelsStream).toList();
 
         return nonUniqueUriClassNode.toBuilder()
             .withUri(uniqueUri)
-            .withClassLabels(nonUniqueUriClassNode.classLabels())
+            .withClassLabels(uniqueLabels)
             .build();
     }
 

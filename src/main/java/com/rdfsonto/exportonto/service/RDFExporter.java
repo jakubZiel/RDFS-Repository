@@ -1,11 +1,15 @@
 package com.rdfsonto.exportonto.service;
 
+import static org.eclipse.rdf4j.rio.RDFFormat.TURTLE;
+
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 import org.eclipse.rdf4j.model.IRI;
@@ -19,7 +23,6 @@ import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.Rio;
 import org.springframework.stereotype.Component;
 
-import com.rdfsonto.rdf4j.KnownPrefix;
 import com.rdfsonto.rdf4j.RDFInputOutput;
 
 
@@ -27,39 +30,29 @@ import com.rdfsonto.rdf4j.RDFInputOutput;
 public class RDFExporter extends RDFInputOutput
 {
 
-    private static final Set<String> KNOWN_NAMESPACES = Set.of("http://www.w3.org/2002/07/owl#",
+    private static final Set<String> KNOWN_NAMESPACES = Set.of(
+        "http://www.w3.org/2002/07/owl#",
         "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
         "http://www.w3.org/2000/01/rdf-schema#",
         "http://www.user_neo4j.com#",
         "http://www.w3.org/XML/1998/namespace");
 
-    public void prepareRDFFileForExport(final Path inputFile, final String tag, final RDFFormat rdfFormat) throws IOException
+    public File prepareRdfFileForExport(final Path inputFile, final String tag, final RDFFormat rdfFormat, final Map<String, String> namespaces)
+        throws IOException
     {
         outModel = new ModelBuilder().build();
-        loadModel(inputFile, rdfFormat);
+        loadModel(inputFile, TURTLE);
 
-        saveExportReadyModel(
-            Paths.get(generateFileName(inputFile.toAbsolutePath().toString(), "-exp")),
-            rdfFormat,
-            tag);
+        final var outputFilePath = Paths.get(generateFileName(inputFile.toAbsolutePath().toString(), "-exp"));
+        saveExportReadyModel(outputFilePath, rdfFormat, tag, namespaces);
+
+        return outputFilePath.toFile();
     }
 
-    private void saveExportReadyModel(final Path outputFile, final RDFFormat rdfFormat, final String tag) throws FileNotFoundException
+    private void saveExportReadyModel(final Path outputFile, final RDFFormat rdfFormat, final String tag, final Map<String, String> namespaces)
+        throws FileNotFoundException
     {
-        model.getNamespaces().forEach(namespace -> {
-            if (KnownPrefix.isKnownPrefix(namespace.getPrefix()))
-            {
-                outModel.setNamespace(namespace);
-                knownNamespaces.add(namespace.getName());
-            }
-            else
-            {
-                outModel.setNamespace(
-                    namespace.getPrefix(),
-                    namespace.getName().substring(0, namespace.getName().lastIndexOf(tag + "#")) + "#"
-                );
-            }
-        });
+        namespaces.forEach((key, value) -> outModel.setNamespace(key, value));
 
         knownNamespaces.clear();
         knownNamespaces.addAll(KNOWN_NAMESPACES);
@@ -149,17 +142,6 @@ public class RDFExporter extends RDFInputOutput
             return Values.iri(untaggedObject + "#", iriObject.getLocalName());
         }
         return iriObject;
-    }
-
-    public static void main(String[] args) throws IOException
-    {
-        RDFExporter e = new RDFExporter();
-
-        e.prepareRDFFileForExport(
-            Paths.get("/home/jzielins/Projects/ontology-editor-backend/src/main/resources/rdfs/vw2.owl"),
-            "@123@123@",
-            RDFFormat.TURTLE
-        );
     }
 }
 

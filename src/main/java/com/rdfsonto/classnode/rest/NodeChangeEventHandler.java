@@ -47,17 +47,17 @@ public class NodeChangeEventHandler
     private NodeChangeEventResponse handleDelete(final NodeChangeEvent deleteEvent)
     {
         classNodeService.deleteById(deleteEvent.nodeId());
-        final var isDeleted = classNodeService.findById(deleteEvent.nodeId()).isEmpty();
+        // TODO / TO_DELETE final var isDeleted = classNodeService.findById(deleteEvent.nodeId()).isEmpty();
 
         return NodeChangeEventResponse.builder()
             .withEvent(deleteEvent)
-            .withFailed(isDeleted)
+            //.withFailed(isDeleted)
             .build();
     }
 
     private NodeChangeEventResponse handleCreate(final NodeChangeEvent createEvent, final Long projectId)
     {
-        final var savedNode = classNodeService.save(createEvent.body(), projectId);
+        final var savedNode = classNodeService.save(projectId, createEvent.body());
 
         final var responseBuilder = NodeChangeEventResponse.builder()
             .withEvent(createEvent)

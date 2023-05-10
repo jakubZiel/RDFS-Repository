@@ -1,5 +1,7 @@
 package com.rdfsonto.infrastructure.config.security;
 
+import java.util.List;
+
 import org.keycloak.adapters.springsecurity.KeycloakConfiguration;
 import org.keycloak.adapters.springsecurity.authentication.KeycloakAuthenticationProvider;
 import org.keycloak.adapters.springsecurity.config.KeycloakWebSecurityConfigurerAdapter;
@@ -41,6 +43,8 @@ public class SecurityConfig extends KeycloakWebSecurityConfigurerAdapter
 
         config.addAllowedMethod(HttpMethod.DELETE);
         config.addAllowedMethod(HttpMethod.PUT);
+
+        config.setExposedHeaders(List.of("Content-Disposition"));
 
         source.registerCorsConfiguration("/**", config);
         final var bean = new FilterRegistrationBean(new CorsFilter(source));

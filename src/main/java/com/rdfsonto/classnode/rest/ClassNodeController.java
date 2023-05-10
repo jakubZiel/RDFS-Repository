@@ -34,27 +34,27 @@ public class ClassNodeController
     private final NodeChangeEventHandler nodeChangeEventHandler;
 
     @GetMapping("/{id}")
-    ResponseEntity<?> getClassNodeById(@PathVariable final long id)
+    ResponseEntity<?> getClassNodeById(@PathVariable final long id, @RequestParam final long projectId)
     {
-        final var node = classNodeService.findById(id);
+        final var node = classNodeService.findById(projectId, id);
         return node.isPresent() ? ResponseEntity.of(node) : ResponseEntity.notFound().build();
     }
 
     @PostMapping("/ids")
-    ResponseEntity<?> getClassNodesById(@RequestBody final List<Long> nodeIds)
+    ResponseEntity<?> getClassNodesById(@RequestParam final long projectId, @RequestBody final List<Long> nodeIds)
     {
         if (nodeIds == null || nodeIds.isEmpty())
         {
             return ResponseEntity.ok(Collections.emptyList());
         }
 
-        return ResponseEntity.ok(classNodeService.findByIds(nodeIds));
+        return ResponseEntity.ok(classNodeService.findByIds(projectId, nodeIds));
     }
 
     @GetMapping("/neighbours/{id}")
-    ResponseEntity<?> getClassNodeNeighbours(@PathVariable final long id, @RequestParam final int maxDistance)
+    ResponseEntity<?> getClassNodeNeighbours(@PathVariable final long id, @RequestParam final int maxDistance, @RequestParam final long projectId)
     {
-        final var neighbours = classNodeService.findNeighbours(id, maxDistance, List.of());
+        final var neighbours = classNodeService.findNeighbours(projectId, id, maxDistance, List.of());
         return ResponseEntity.ok(neighbours);
     }
 
@@ -63,20 +63,20 @@ public class ClassNodeController
                                                   @RequestParam final int maxDistance,
                                                   @RequestParam final long projectId)
     {
-        final var neighbours = classNodeService.findNeighboursByUri(uri, projectId, maxDistance, List.of());
+        final var neighbours = classNodeService.findNeighboursByUri(projectId, uri, maxDistance, List.of());
         return ResponseEntity.ok(neighbours);
     }
 
     @PostMapping
     ResponseEntity<?> createNode(@RequestBody final ClassNode node, final long projectId)
     {
-        return ResponseEntity.ok(classNodeService.save(node, projectId));
+        return ResponseEntity.ok(classNodeService.save(projectId, node));
     }
 
     @PutMapping
     ResponseEntity<?> updateNode(@RequestBody final ClassNode nodeUpdate, final long projectId)
     {
-        return ResponseEntity.ok(classNodeService.save(nodeUpdate, projectId));
+        return ResponseEntity.ok(classNodeService.save(projectId, nodeUpdate));
     }
 
     @DeleteMapping("/{id}")
