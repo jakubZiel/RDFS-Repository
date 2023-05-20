@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.rdfsonto.classnode.service.ClassNodeException;
+import com.rdfsonto.classnode.service.UriRemoveUniquenessHandler;
 import com.rdfsonto.classnode.service.UriUniquenessHandler;
 import com.rdfsonto.prefix.database.PrefixNodeRepository;
 import com.rdfsonto.prefix.database.PrefixNodeVo;
@@ -27,6 +28,7 @@ public class PrefixNodeServiceImpl implements PrefixNodeService
     private final PrefixNodeRepository prefixNodeRepository;
     private final ProjectService projectService;
     private final UriUniquenessHandler uriHandler;
+    private final UriRemoveUniquenessHandler uriRemoveHandler;
 
     @Override
     public Optional<PrefixMapping> findAll(final long projectId)
@@ -38,7 +40,7 @@ public class PrefixNodeServiceImpl implements PrefixNodeService
         return prefixNodeRepository.findByProjectId(projectId)
             .map(prefix -> prefix.getPrefixes().entrySet().stream()
                 .filter(namespace -> !KnownPrefix.UN.getPrefix().equals(namespace.getKey()))
-                .map(namespace -> Map.entry(namespace.getKey(), uriHandler.removeUniqueness(namespace.getValue())))
+                .map(namespace -> Map.entry(namespace.getKey(), uriRemoveHandler.removeUniqueness(namespace.getValue())))
                 .map(this::endNamespaceWithHash)
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)))
             .map(prefixToUri -> PrefixMapping.builder()
@@ -58,7 +60,7 @@ public class PrefixNodeServiceImpl implements PrefixNodeService
 
         final var uniquePrefixes = updatePrefixes.entrySet().stream()
             .map(prefix -> Map.entry(prefix.getKey(), KnownPrefix.isKnownPrefix(prefix.getKey())
-                ? prefix.getValue() : uriHandler.applyUniqueness(prefix.getValue(), projectTag)))
+                ? prefix.getValue() : uriHandler.applyUniqueness(prefix.getValue(), projectTag, true)))
             .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
 
         final var updatePrefix = prefixNodeRepository.findByProjectId(projectId)

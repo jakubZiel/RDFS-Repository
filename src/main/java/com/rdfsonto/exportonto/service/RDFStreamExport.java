@@ -1,6 +1,7 @@
 package com.rdfsonto.exportonto.service;
 
 import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.rio.RDFHandler;
@@ -18,13 +19,13 @@ public class RDFStreamExport extends RDFInputOutput implements RDFHandler
     }
 
     @Override
-    protected IRI handleSubject(final IRI subject, final String tag)
+    protected Resource handleSubject(final Resource subject, final String tag)
     {
         return null;
     }
 
     @Override
-    protected Value handleObject(final Value object, final String tag)
+    protected Value handleObject(final Statement object, final String tag)
     {
         return null;
     }

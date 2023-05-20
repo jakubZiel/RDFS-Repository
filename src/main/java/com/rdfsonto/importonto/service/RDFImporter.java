@@ -7,9 +7,11 @@ import java.net.URL;
 import java.nio.channels.Channels;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.Set;
 
+import org.apache.commons.lang3.NotImplementedException;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Namespace;
 import org.eclipse.rdf4j.model.Resource;
@@ -22,7 +24,6 @@ import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.Rio;
 
-import com.rdfsonto.rdf4j.KnownPrefix;
 import com.rdfsonto.rdf4j.RDFInputOutput;
 
 import lombok.NoArgsConstructor;
@@ -31,6 +32,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class RDFImporter extends RDFInputOutput
 {
+    private static final String REFERENCED_RESOURCE = "http://user_neo4j/referencedResource";
+
     public void prepareRDFFileToMergeIntoNeo4j(final URL inputURL, final Path outputFile, final String tag, final RDFFormat rdfFormat)
         throws IOException
     {
@@ -56,38 +59,28 @@ public class RDFImporter extends RDFInputOutput
     private void saveMergeReadyModel(final Path outputFile, final RDFFormat rdfFormat, final String tag)
         throws FileNotFoundException
     {
-
         model.setNamespace(USER_NAMESPACE_PREFIX, USER_NAMESPACE);
-
-        model.getNamespaces().forEach(namespace -> {
-            if (KnownPrefix.isKnownPrefix(namespace.getPrefix()))
-            {
-                outModel.setNamespace(namespace);
-                knownNamespaces.add(namespace.getName());
-            }
-            else
-            {
-                outModel.setNamespace(
-                    namespace.getPrefix(),
-                    namespace.getName().replaceAll("#", tag + "#")
-                );
-            }
-        });
 
         model.forEach(statement -> {
                 final var taggedStatement = tagStatement(statement, tag);
-                if (taggedStatement == null)
-                {
-                    return;
-                }
                 outModel.add(taggedStatement);
             }
         );
-
         applyUserLabel(tag);
+
+        final var x = outModel.stream().sorted(new Comparator<Statement>()
+        {
+            @Override
+            public int compare(final Statement o1, final Statement o2)
+            {
+                return o1.getSubject().toString().compareTo(o2.getSubject().toString());
+            }
+        }).toList();
+
         final var name = outputFile.toString();
         final var output = new FileOutputStream(name);
-        Rio.write(outModel, output, rdfFormat);
+
+        Rio.write(x, output, RDFFormat.RDFXML);
     }
 
     private void applyUserLabel(String label)
@@ -100,40 +93,83 @@ public class RDFImporter extends RDFInputOutput
     {
         if (!(validate(originalStatement.getSubject()) && validate(originalStatement.getObject())))
         {
-            return originalStatement;
+            throw new NotImplementedException("Handling of Triple is not implemented");
         }
 
-        final var subject = (IRI) originalStatement.getSubject();
+        final var subject = originalStatement.getSubject();
         final var predicate = originalStatement.getPredicate();
-        final var object = originalStatement.getObject();
 
         final var sub = handleSubject(subject, tag);
         final var pred = handlePredicate(predicate, tag);
-        final var obj = handleObject(object, tag);
+        final var obj = handleObject(originalStatement, tag);
 
         return Statements.statement(sub, pred, obj, null);
     }
 
     @Override
-    protected IRI handleSubject(final IRI subject, final String tag)
+    protected Resource handleSubject(final Resource subject, final String tag)
     {
-        return knownNamespaces.contains(subject.getNamespace()) ? subject :
-            Values.iri(subject.getNamespace().replaceAll("#", tag + "#"), subject.getLocalName());
+        if (subject.isBNode())
+        {
+            return subject;
+        }
+
+        if (subject.isIRI())
+        {
+            final var iri = (IRI) subject;
+            final var namespace = iri.getNamespace();
+            final var localName = iri.getLocalName();
+
+            return Values.iri(namespace + tag + localName);
+        }
+
+        throw new NotImplementedException("Handling of invalid subject: %s".formatted(subject));
     }
 
     @Override
     protected IRI handlePredicate(final IRI predicate, final String tag)
     {
-        return knownNamespaces.contains(predicate.getNamespace()) ? predicate :
-            Values.iri(predicate.getNamespace().replaceAll("#", tag + "#"), predicate.getLocalName());
+        if (model.subjects().contains(predicate))
+        {
+            final var namespace = predicate.getNamespace();
+            final var localName = predicate.getLocalName();
+
+            return Values.iri(namespace + tag + localName);
+        }
+
+        return predicate;
     }
 
     @Override
-    protected Value handleObject(final Value object, final String tag)
+    protected Value handleObject(final Statement statement, final String tag)
     {
-        return object.isLiteral() ? object :
-            knownNamespaces.contains(((IRI) object).getNamespace()) ? object :
-                Values.iri(((IRI) object).getNamespace().replaceAll("#", tag + "#"), ((IRI) object).getLocalName());
+        final var object = statement.getObject();
+        if (object.isBNode() || object.isLiteral())
+        {
+            return object;
+        }
+
+        if (object.isIRI())
+        {
+            final var iriObject = (IRI) object;
+
+            if (!model.subjects().contains(iriObject) && !statement.getPredicate().equals(RDF.TYPE))
+            {
+                addReferenceIndicator(iriObject);
+            }
+
+            final var namespace = iriObject.getNamespace();
+            final var localName = iriObject.getLocalName();
+
+            return model.subjects().contains(iriObject) ? Values.iri(namespace + tag + localName) : iriObject;
+        }
+
+        throw new NotImplementedException("Handling of invalid object: %s".formatted(object));
+    }
+
+    void addReferenceIndicator(final IRI referencedValue)
+    {
+        outModel.add(referencedValue, RDF.TYPE, Values.iri(REFERENCED_RESOURCE));
     }
 
     public static void main(String[] args) throws IOException
@@ -141,9 +177,9 @@ public class RDFImporter extends RDFInputOutput
         final RDFImporter d = new RDFImporter();
 
         d.prepareRDFFileToMergeIntoNeo4j(
-            new URL("file:/home/jzielins/Projects/ontology-editor-backend/src/main/resources/rdfs/vw.owl"),
+            new URL("file:/home/jzielins/Projects/ontology-editor-backend/src/main/resources/rdfs-test/HumanDO.txt"),
             Paths.get("/home/jzielins/Projects/ontology-editor-backend/src/main/resources/rdfs/vw2.owl"),
             "@123@123@",
-            RDFFormat.TURTLE);
+            RDFFormat.RDFXML);
     }
 }

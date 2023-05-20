@@ -51,7 +51,6 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class ClassNodeNeo4jDriverRepository
 {
-
     private final Driver driver;
     private final Neo4jTemplate neo4jTemplate;
     private final RelationshipNeo4jDriverRepository relationshipNeo4jDriverRepository;
@@ -64,7 +63,6 @@ public class ClassNodeNeo4jDriverRepository
     public ClassNodeProjection save(final ClassNode updateNode)
     {
         final var transaction = driver.session().beginTransaction();
-
         try
         {
             final var nodeId = classNodeRepository.findProjectionById(updateNode.id())
@@ -148,7 +146,7 @@ public class ClassNodeNeo4jDriverRepository
         }
         catch (final Neo4jException exception)
         {
-            return null;
+            throw new IllegalStateException(exception.getMessage());
         }
     }
 
@@ -212,20 +210,25 @@ public class ClassNodeNeo4jDriverRepository
         final var whereClause = "WHERE ";
 
         final var propertiesConditionStatement = propertyFilters.stream()
-            .map(filter -> "node.`%s` %s '%s'".formatted(filter.property(), buildOperator(filter.operator()), filter.value()))
+            .map(filter -> "%s %s ".formatted(multiValToSingleVal(filter.property()), buildOperatorAndValue(filter)))
             .collect(Collectors.joining(AND + Strings.LINE_SEPARATOR));
 
-        return String.join(Strings.LINE_SEPARATOR, List.of(whereClause, propertiesConditionStatement));
+        return String.join(Strings.LINE_SEPARATOR, List.of(whereClause, propertiesConditionStatement)) + " \n";
     }
 
-    private String buildOperator(final FilterCondition.Operator operator)
+    private String buildOperatorAndValue(final FilterCondition filterCondition)
     {
-        if (operator == FilterCondition.Operator.EQUALS)
+        return switch (filterCondition.operator())
         {
-            return "=";
-        }
+            case EQUALS -> "= '%s'".formatted(filterCondition.value());
+            case EXISTS -> "IS NOT NULL";
+            default -> "%s '%s'".formatted(filterCondition.operator().toString(), filterCondition.value());
+        };
+    }
 
-        return operator.toString();
+    private String multiValToSingleVal(final String property)
+    {
+        return "apoc.text.join(node.`%s`, ' ')".formatted(property);
     }
 
     private void handleRelationshipDiff(final long nodeId,
@@ -299,7 +302,7 @@ public class ClassNodeNeo4jDriverRepository
     {
         final Map<String, Object> nodeIdParamMap = Map.of(NODE_ID_KEY, nodeId);
         final var queryNodeLabels =
-            new Query(MATCH_NODE_TEMPLATE + "return labels(node) as labels", nodeIdParamMap);
+            new Query(MATCH_NODE_TEMPLATE + "RETURN labels(node) AS labels", nodeIdParamMap);
 
         final var persistedLabels = transaction.run(queryNodeLabels).single().get("labels").asList(Value::asString).stream()
             .map("`%s`"::formatted)

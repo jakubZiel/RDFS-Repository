@@ -3,33 +3,33 @@ package com.rdfsonto.classnode.database;
 public class ClassNodeNeo4jDriverRepositoryTemplates
 {
     static final String MATCH_NODE_TEMPLATE = """
-        MATCH (node:Resource) where id(node) = $nodeId
+        MATCH (node:Resource) WHERE id(node) = $nodeId
         """;
     static final String CREATE_NODE_TEMPLATE = """
-        CREATE (node:Resource{uri: $uri}) return node
+        CREATE (node:Resource{uri: $uri}) RETURN node
         """;
     static final String CLEAR_PROPERTIES_TEMPLATE = """
         node = {uri: $uri}
         """;
     static final String SET_NODE_PROPERTIES_TEMPLATE = """
-        MATCH (node) where id(node) = %s
+        MATCH (node) WHERE id(node) = %s
         SET""";
     static final String SET_PROPERTY_TEMPLATE = """
         node.`%s` = $param%s""";
     static final String OUTGOING_NEIGHBOURS_QUERY_TEMPLATE = """
         MATCH (n:Resource)-[rel]->(neighbour:Resource)
         WHERE id(n) IN $nodeIds
-        RETURN neighbour, id(n) as source, type(rel) as relation, id(rel) as relationshipId
+        RETURN neighbour, id(n) AS source, type(rel) AS relation, id(rel) AS relationshipId
         """;
     static final String INCOMING_NEIGHBOURS_QUERY_TEMPLATE = """
         MATCH (n:Resource)<-[rel]-(neighbour:Resource)
         WHERE id(n) IN $nodeIds
-        RETURN neighbour, id(n) as source, type(rel) as relation, id(rel) as relationshipId
+        RETURN neighbour, id(n) AS source, type(rel) AS relation, id(rel) AS relationshipId
         """;
     static final String FIND_ALL_NODE_PROPERTIES_QUERY_TEMPLATE = """
         UNWIND $nodeIds AS nodeId
         MATCH (n:Resource) WHERE id(n) = nodeId
-        RETURN id(n) as id, properties(n) as properties
+        RETURN id(n) AS id, properties(n) AS properties
         """;
 
     static final String DELETE_ALL_RESOURCE_NODES_WITH_LABEL_TEMPLATE = """

@@ -7,9 +7,10 @@ import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.Set;
 
-import org.eclipse.rdf4j.model.BNode;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Model;
+import org.eclipse.rdf4j.model.Resource;
+import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.Rio;
@@ -29,16 +30,11 @@ public abstract class RDFInputOutput
         this.knownNamespaces = new HashSet<>();
     }
 
+    protected abstract Resource handleSubject(Resource subject, String tag);
+
     protected abstract IRI handlePredicate(IRI predicate, String tag);
 
-    protected abstract IRI handleSubject(IRI subject, String tag);
-
-    protected abstract Value handleObject(Value object, String tag);
-
-    protected BNode handleBNode(BNode bnode)
-    {
-        return null;
-    }
+    protected  abstract Value handleObject(Statement statement, String tag);
 
     protected void loadModel(final Path outputFile, final RDFFormat rdfFormat) throws IOException
     {
@@ -48,7 +44,7 @@ public abstract class RDFInputOutput
 
     protected boolean validate(Value object)
     {
-        return !(object.isBNode() || object.isTriple());
+        return !object.isTriple();
     }
 
     protected String generateFileName(String fileName, String suffix) throws FileSystemException

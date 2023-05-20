@@ -1,5 +1,6 @@
 package com.rdfsonto.exportonto.service;
 
+import static org.eclipse.rdf4j.rio.RDFFormat.RDFXML;
 import static org.eclipse.rdf4j.rio.RDFFormat.TURTLE;
 
 import org.eclipse.rdf4j.rio.RDFFormat;
@@ -25,7 +26,7 @@ public class Neo4jGraphSerializer
     {
         final var request = GraphSerializeRequest.builder()
             .withCypher(GET_PROJECT_NODES_QUERY_TEMPLATE.formatted(projectTag))
-            .withFormat(TURTLE.getName())
+            .withFormat(RDFXML.getName())
             .build();
 
         return client.serializeGraphToRdf(request);

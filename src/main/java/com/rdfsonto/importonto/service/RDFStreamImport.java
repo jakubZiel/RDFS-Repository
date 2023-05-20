@@ -1,6 +1,7 @@
 package com.rdfsonto.importonto.service;
 
 import org.eclipse.rdf4j.model.IRI;
+import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.rio.RDFHandler;
@@ -26,7 +27,6 @@ class RDFStreamImport extends RDFInputOutput implements RDFHandler
     @Override
     public void handleNamespace(final String prefix, final String uri) throws RDFHandlerException
     {
-
     }
 
     @Override
@@ -42,19 +42,20 @@ class RDFStreamImport extends RDFInputOutput implements RDFHandler
     }
 
     @Override
+    protected Resource handleSubject(final Resource subject, final String tag)
+    {
+        return null;
+    }
+
+    @Override
     protected IRI handlePredicate(final IRI predicate, final String tag)
     {
         return null;
     }
 
-    @Override
-    protected IRI handleSubject(final IRI subject, final String tag)
-    {
-        return null;
-    }
 
     @Override
-    protected Value handleObject(final Value object, final String tag)
+    protected Value handleObject(final Statement object, final String tag)
     {
         return null;
     }

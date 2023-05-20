@@ -20,7 +20,6 @@ import org.springframework.transaction.annotation.Transactional;
 import com.rdfsonto.classnode.database.ClassNodeRepository;
 import com.rdfsonto.classnode.service.ClassNodeException;
 import com.rdfsonto.classnode.service.UniqueUriIdHandler;
-import com.rdfsonto.prefix.service.PrefixMapping;
 import com.rdfsonto.prefix.service.PrefixNodeService;
 import com.rdfsonto.project.service.ProjectService;
 import com.rdfsonto.user.service.UserService;
@@ -111,10 +110,22 @@ class ExportOntologyServiceImpl implements ExportOntologyService
         {
             final var extractedOntologyFile = new File(exportIdToPath(exportId, rdfFormat).toString());
             final var absolutePath = extractedOntologyFile.getCanonicalPath();
-            final var namespaces = prefixNodeService.findAll(projectId).map(PrefixMapping::prefixToUri).orElse(Map.of());
+            // TODO
+            // final var namespaces = prefixNodeService.findAll(projectId).map(PrefixMapping::prefixToUri).orElse(Map.of());
 
-            final var exportedOntologyFile =
-                rdfExporter.prepareRdfFileForExport(Path.of(absolutePath), ontologyTag, rdfFormat, namespaces);
+            final var namespaces = Map.of(
+                "dc", "http://purl.org/dc/elements/1.1/",
+                "obo", "http://purl.obolibrary.org/obo/",
+                "owl", "http://www.w3.org/2002/07/owl#",
+                "rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+                "doid", "http://purl.obolibrary.org/obo/doid#",
+                "rdfs", "http://www.w3.org/2000/01/rdf-schema#",
+                "skos", "http://www.w3.org/2004/02/skos/core#",
+                "terms", "http://purl.org/dc/terms/",
+                "oboInOwl", "http://www.geneontology.org/formats/oboInOwl#"
+            );
+
+            final var exportedOntologyFile = rdfExporter.prepareRdfFileForExport(Path.of(absolutePath), ontologyTag, rdfFormat, namespaces);
 
             final var inputStream = new BufferedInputStream(new FileInputStream(exportedOntologyFile));
 

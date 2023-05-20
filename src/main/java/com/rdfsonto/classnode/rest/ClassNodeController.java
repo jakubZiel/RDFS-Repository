@@ -115,10 +115,11 @@ public class ClassNodeController
     @ExceptionHandler(ClassNodeException.class)
     public ResponseEntity<?> handle(final ClassNodeException classNodeException)
     {
+        // TODO REMOVE
+        classNodeException.printStackTrace();
 
         if (classNodeException.getErrorCode() == ClassNodeExceptionErrorCode.DATABASE_INTERNAL_ERROR)
         {
-            classNodeException.printStackTrace();
             return ResponseEntity.internalServerError().build();
         }
 

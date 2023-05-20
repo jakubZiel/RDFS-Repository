@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.apache.commons.validator.routines.UrlValidator;
 import org.springframework.stereotype.Component;
 
 import com.rdfsonto.prefix.service.PrefixMapping;
@@ -39,6 +40,16 @@ class RemovePrefixHandler
         }
 
         return removePrefix(prefixedUris, prefixMapping.prefixToUri());
+    }
+
+    String removePrefix(final String prefixedUri, final long projectId)
+    {
+        final var prefixMapping = prefixNodeService.findAll(projectId).orElse(null);
+        if (prefixMapping == null)
+        {
+            return prefixedUri;
+        }
+        return removePrefix(prefixedUri, prefixMapping.prefixToUri());
     }
 
     private ClassNode removePrefix(final ClassNode classNode, final PrefixMapping prefixMapping)
@@ -89,9 +100,36 @@ class RemovePrefixHandler
             .toList();
     }
 
-    private String removePrefix(final String prefixedUri, final Map<String, String> prefixToUri)
+    private String removePrefix(final String prefixedUri, final Map<String, String> prefixToUri1)
     {
+        final var prefixToUri = Map.of(
+            "dc", "http://purl.org/dc/elements/1.1/",
+            "obo", "http://purl.obolibrary.org/obo/",
+            "owl", "http://www.w3.org/2002/07/owl#",
+            "rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+            "doid", "http://purl.obolibrary.org/obo/doid#",
+            "rdfs", "http://www.w3.org/2000/01/rdf-schema#",
+            "skos", "http://www.w3.org/2004/02/skos/core#",
+            "terms", "http://purl.org/dc/terms/",
+            "oboInOwl", "http://www.geneontology.org/formats/oboInOwl#"
+        );
+
+        if (prefixedUri.equals("http://user_neo4j/referencedResource"))
+        {
+            return prefixedUri;
+        }
+
+        if (new UrlValidator().isValid(prefixedUri))
+        {
+            return prefixedUri;
+        }
+
         final var uriFragments = Arrays.stream(prefixedUri.split(":")).toList();
+
+        if (uriFragments.size() <= 1)
+        {
+            return prefixedUri;
+        }
 
         final var prefix = uriFragments.stream().findFirst()
             .orElseThrow(() -> new IllegalStateException("Invalid prefixed uri: %s".formatted(prefixedUri)));

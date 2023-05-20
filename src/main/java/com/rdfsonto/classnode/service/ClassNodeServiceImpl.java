@@ -9,6 +9,7 @@ import static com.rdfsonto.classnode.service.ClassNodeExceptionErrorCode.INVALID
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import org.apache.commons.lang3.NotImplementedException;
 import org.springframework.stereotype.Component;
@@ -31,6 +32,7 @@ import lombok.extern.slf4j.Slf4j;
 @Transactional(noRollbackFor = ClassNodeException.class)
 public class ClassNodeServiceImpl implements ClassNodeService
 {
+    private static final String URI_PROPERTY = "uri";
     private static final String USER_NAMESPACE_LABEL_PREFIX = "http://www.user_neo4j.com";
     private final static long MAX_NUMBER_OF_NEIGHBOURS = 1000;
 
@@ -39,6 +41,7 @@ public class ClassNodeServiceImpl implements ClassNodeService
     private final ClassNodeNeo4jDriverRepository classNodeNeo4jDriverRepository;
     private final ClassNodeMapper classNodeMapper;
     private final UriUniquenessHandler uriHandler;
+    private final UriRemoveUniquenessHandler uriRemoveHandler;
     private final PrefixHandler prefixHandler;
     private final RemovePrefixHandler removePrefixHandler;
     private final ClassNodeValidator classNodeValidator;
@@ -52,7 +55,6 @@ public class ClassNodeServiceImpl implements ClassNodeService
         {
             throw new IllegalStateException("Not all nodes exist");
         }
-
         final var properties = classNodeNeo4jDriverRepository.findAllNodeProperties(ids);
 
         final var incoming = classNodeNeo4jDriverRepository.findAllIncomingNeighbours(ids);
@@ -79,7 +81,7 @@ public class ClassNodeServiceImpl implements ClassNodeService
                 classNodeMapper.mapToDomain(node,
                     groupedIncoming.get(node.getId()),
                     groupedOutgoing.get(node.getId())))
-            .map(uriHandler::removeUniqueness)
+            .map(uriRemoveHandler::removeUniqueness)
             .toList();
 
         return prefixHandler.applyPrefix(nonPrefixedNodes, projectId);
@@ -94,15 +96,13 @@ public class ClassNodeServiceImpl implements ClassNodeService
                 INVALID_PROJECT_ID));
 
         final var nonPrefixedLabels = removePrefixHandler.removePrefix(labels, projectId);
-        final var nonPrefixedProperties = removePrefixHandler.removePrefix(filters.stream().map(FilterCondition::property).toList(), projectId);
-        final var nonPrefixedFilters = Streams.zip(filters.stream(), nonPrefixedProperties.stream(),
-            (filter, prefixedProp) -> filter.toBuilder().withProperty(prefixedProp).build()).toList();
+        final var nonPrefixedFilters = handleFilterPropertyPrefixes(filters, projectId);
 
         final var projectTag = projectService.getProjectTag(project);
-        final var uniqueFilters = uriHandler.applyUniqueness(nonPrefixedFilters, projectTag);
-        final var uniqueLabels = uriHandler.addUniqueLabel(nonPrefixedLabels, projectTag);
+        final var uniqueFilters = nonPrefixedFilters.stream().map(filter -> uriHandler.applyUniqueness(filter, projectTag)).toList();
+        //final var uniqueLabels = uriHandler.addUniqueLabel(nonPrefixedLabels, projectTag);
 
-        final var nodeIds = classNodeNeo4jDriverRepository.findAllNodeIdsByPropertiesAndLabels(uniqueLabels, uniqueFilters);
+        final var nodeIds = classNodeNeo4jDriverRepository.findAllNodeIdsByPropertiesAndLabels(nonPrefixedLabels, uniqueFilters);
 
         return findByIds(projectId, nodeIds);
     }
@@ -132,7 +132,7 @@ public class ClassNodeServiceImpl implements ClassNodeService
         final var outgoing = classNodeNeo4jDriverRepository.findAllOutgoingNeighbours(nodeId);
 
         return Optional.of(classNodeMapper.mapToDomain(notHydratedNode, incoming, outgoing))
-            .map(uriHandler::removeUniqueness)
+            .map(uriRemoveHandler::removeUniqueness)
             .map(node -> prefixHandler.applyPrefix(node, projectId));
     }
 
@@ -176,7 +176,7 @@ public class ClassNodeServiceImpl implements ClassNodeService
             throw new NotImplementedException();
         }
 
-        // TODO apply relationships to findAllNeighbours
+        //TODO apply relationships to findAllNeighbours
         final var nonPrefixedRelationships = removePrefixHandler.removePrefix(allowedRelationships, projectId);
 
         final var neighbourIds = classNodeRepository.findAllNeighbours(maxDistance, nodeId).stream()
@@ -247,12 +247,35 @@ public class ClassNodeServiceImpl implements ClassNodeService
             .filter(relationship -> relationship.startsWith("http"))
             .toList();
 
-        final var nonPrefixedMetadata = ProjectNodeMetadata.builder()
+        final var uniqueMetaData = ProjectNodeMetadata.builder()
             .withPropertyKeys(propertyKeys)
             .withRelationshipTypes(relationshipTypes)
             .withNodeLabels(labels)
             .build();
 
-        return prefixHandler.applyPrefix(nonPrefixedMetadata, projectId);
+        final var nonUniqueMetadata = uriRemoveHandler.removeUniqueness(uniqueMetaData);
+        return prefixHandler.applyPrefix(nonUniqueMetadata, projectId);
+    }
+
+    private List<FilterCondition> handleFilterPropertyPrefixes(final List<FilterCondition> filters, final long projectId)
+    {
+        final var uriFilterGroupByIsUri = filters.stream()
+            .collect(Collectors.groupingBy(filter -> filter.property().equals(URI_PROPERTY)));
+
+        final var uri = Optional.ofNullable(uriFilterGroupByIsUri.get(true)).orElse(List.of());
+        final var nonUri = Optional.ofNullable(uriFilterGroupByIsUri.get(false)).orElse(List.of());
+
+        final var nonPrefixedUriFilter = uri.stream()
+            .map(filter -> filter.toBuilder()
+                .withValue(removePrefixHandler.removePrefix(filter.value(), projectId))
+                .build());
+
+        final var nonUriFilterProperties = nonUri.stream().map(FilterCondition::property).toList();
+        final var nonPrefixedNonUriFilterPropertiesStream = removePrefixHandler.removePrefix(nonUriFilterProperties, projectId).stream();
+
+        final var nonPrefixedNonUriFilters = Streams.zip(nonPrefixedNonUriFilterPropertiesStream, nonUri.stream(),
+            (nonPrefixedProperty, filter) -> filter.toBuilder().withProperty(nonPrefixedProperty).build());
+
+        return Stream.concat(nonPrefixedUriFilter, nonPrefixedNonUriFilters).toList();
     }
 }

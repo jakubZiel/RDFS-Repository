@@ -9,7 +9,6 @@ import lombok.Getter;
 @AllArgsConstructor
 public enum KnownPrefix
 {
-
     RDF("rdf"),
     OWL("owl"),
     XML("xml"),
