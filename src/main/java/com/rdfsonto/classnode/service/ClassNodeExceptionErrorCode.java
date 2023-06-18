@@ -9,6 +9,6 @@ public enum ClassNodeExceptionErrorCode
     INVALID_USER_ID,
     INVALID_MAX_DISTANCE,
     INVALID_REQUEST,
-    DATABASE_INTERNAL_ERROR,
+    INTERNAL_ERROR,
     INVALID_PREFIX,
 }

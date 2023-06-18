@@ -72,7 +72,7 @@ public class ExportOntologyController
     public ResponseEntity<?> handle(final ClassNodeException classNodeException)
     {
 
-        if (classNodeException.getErrorCode() == ClassNodeExceptionErrorCode.DATABASE_INTERNAL_ERROR)
+        if (classNodeException.getErrorCode() == ClassNodeExceptionErrorCode.INTERNAL_ERROR)
         {
             classNodeException.printStackTrace();
             return ResponseEntity.internalServerError().build();

@@ -6,6 +6,7 @@ import static com.rdfsonto.classnode.service.ClassNodeExceptionErrorCode.INVALID
 import static com.rdfsonto.classnode.service.ClassNodeExceptionErrorCode.INVALID_PROJECT_ID;
 import static com.rdfsonto.classnode.service.ClassNodeExceptionErrorCode.INVALID_REQUEST;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;

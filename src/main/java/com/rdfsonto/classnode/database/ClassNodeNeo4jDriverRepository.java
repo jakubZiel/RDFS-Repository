@@ -94,14 +94,6 @@ public class ClassNodeNeo4jDriverRepository
         }
     }
 
-    public ClassNodeVo create(final ClassNode node, final Transaction transaction)
-    {
-        final var paramMap = Map.of(URI_KEY, (Object) node.uri());
-        final var result = transaction.run(CREATE_NODE_TEMPLATE, paramMap).single();
-
-        return classNodeVoMapper.mapToVo(result.get(NODE_KEY).asNode(), null, null, null);
-    }
-
     public List<ClassNodeVo> findAllIncomingNeighbours(final List<Long> ids)
     {
         return findNeighbours(ids, RelationshipDirection.INCOMING);
@@ -149,12 +141,19 @@ public class ClassNodeNeo4jDriverRepository
             throw new IllegalStateException(exception.getMessage());
         }
     }
-
     @Transactional
     public void deleteAllNodesByProjectLabel(final String projectLabel)
     {
         final var query = DELETE_ALL_RESOURCE_NODES_WITH_LABEL_TEMPLATE.formatted(projectLabel);
         neo4jTemplate.toExecutableQuery(ClassNodeVo.class, new QueryFragmentsAndParameters(query, Map.of())).getResults();
+    }
+
+    private ClassNodeVo create(final ClassNode node, final Transaction transaction)
+    {
+        final var paramMap = Map.of(URI_KEY, (Object) node.uri());
+        final var result = transaction.run(CREATE_NODE_TEMPLATE, paramMap).single();
+
+        return classNodeVoMapper.mapToVo(result.get(NODE_KEY).asNode(), null, null, null);
     }
 
     private List<ClassNodeVo> findNeighbours(final List<Long> ids, final RelationshipDirection relationshipDirection)

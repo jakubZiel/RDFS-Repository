@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 
 import org.neo4j.driver.Query;
 import org.neo4j.driver.Transaction;
+import org.springframework.data.neo4j.core.Neo4jTemplate;
 import org.springframework.stereotype.Repository;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +21,8 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class RelationshipNeo4jDriverRepository
 {
+    private final Neo4jTemplate neo4jTemplate;
+
     @Builder(setterPrefix = "with", toBuilder = true)
     private record RelationshipId(long startNode, long endNode)
     {
@@ -31,10 +34,6 @@ public class RelationshipNeo4jDriverRepository
         MATCH ()-[relation]-()
         WHERE id(relation) in $relationshipIds
         DELETE relation
-        """;
-
-    private static final String MULTIPLE_STATEMENT_QUERY = """
-        CALL apoc.cypher.runMany('%s', {})
         """;
 
     private static final String MATCH_LINK_NODES_TEMPLATE = """ 

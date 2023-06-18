@@ -6,5 +6,5 @@ import java.util.Map;
 
 public interface ClassNodeProjection extends ClassNodePropertiesProjection
 {
-    Map<String, List<ClassNodeProjection>> getNeighbours();
+    Map<String, List<ClassNodePropertiesProjection>> getNeighbours();
 }

@@ -118,7 +118,7 @@ public class ClassNodeController
         // TODO REMOVE
         classNodeException.printStackTrace();
 
-        if (classNodeException.getErrorCode() == ClassNodeExceptionErrorCode.DATABASE_INTERNAL_ERROR)
+        if (classNodeException.getErrorCode() == ClassNodeExceptionErrorCode.INTERNAL_ERROR)
         {
             return ResponseEntity.internalServerError().build();
         }
