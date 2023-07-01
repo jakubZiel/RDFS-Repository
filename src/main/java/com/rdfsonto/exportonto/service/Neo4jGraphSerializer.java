@@ -1,13 +1,12 @@
 package com.rdfsonto.exportonto.service;
 
 import static org.eclipse.rdf4j.rio.RDFFormat.RDFXML;
-import static org.eclipse.rdf4j.rio.RDFFormat.TURTLE;
 
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.springframework.stereotype.Component;
 
 import com.rdfsonto.exportonto.rest.GraphSerializeRequest;
-import com.rdfsonto.exportonto.rest.Neo4jRdfClient;
+import com.rdfsonto.infrastructure.feign.Neo4jRdfClient;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

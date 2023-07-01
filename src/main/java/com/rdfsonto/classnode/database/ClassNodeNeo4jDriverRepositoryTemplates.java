@@ -32,8 +32,20 @@ public class ClassNodeNeo4jDriverRepositoryTemplates
         RETURN id(n) AS id, properties(n) AS properties
         """;
 
+    // TODO - big ontology got stuck during delete, after splitting it took only 90s
+    //:auto MATCH (n:Resource)
+    //CALL { WITH n
+    //DETACH DELETE n
+    //} IN TRANSACTIONS OF 10000 ROWS;
+    // MASS DELETE NEO4J
     static final String DELETE_ALL_RESOURCE_NODES_WITH_LABEL_TEMPLATE = """
         MATCH (n:Resource:`%s`) DETACH DELETE n
+        """;
+
+    static final String ADD_LABEL_TO_ALL_NODES_WITH_ID_IN_NODE_IDS = """
+        MATCH (n:Resource) WHERE id(n) in $nodeIds
+        SET n:%s
+        RETURN n
         """;
 
     static final String NEIGHBOUR_RECORD_KEY = "neighbour";

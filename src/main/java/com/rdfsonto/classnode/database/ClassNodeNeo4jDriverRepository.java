@@ -1,5 +1,6 @@
 package com.rdfsonto.classnode.database;
 
+import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.ADD_LABEL_TO_ALL_NODES_WITH_ID_IN_NODE_IDS;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.AND;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.CLEAR_PROPERTIES_TEMPLATE;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.CREATE_NODE_TEMPLATE;
@@ -141,11 +142,21 @@ public class ClassNodeNeo4jDriverRepository
             throw new IllegalStateException(exception.getMessage());
         }
     }
+
     @Transactional
     public void deleteAllNodesByProjectLabel(final String projectLabel)
     {
         final var query = DELETE_ALL_RESOURCE_NODES_WITH_LABEL_TEMPLATE.formatted(projectLabel);
         neo4jTemplate.toExecutableQuery(ClassNodeVo.class, new QueryFragmentsAndParameters(query, Map.of())).getResults();
+    }
+
+    @Transactional
+    public void batchAddLabel(final List<Long> nodeIds, final String projectTag)
+    {
+        final var query = ADD_LABEL_TO_ALL_NODES_WITH_ID_IN_NODE_IDS.formatted(projectTag);
+        final var parameters = Map.of(NODE_IDS_KEY, (Object) nodeIds);
+
+        neo4jTemplate.toExecutableQuery(ClassNodeVo.class, new QueryFragmentsAndParameters(query, parameters)).getResults();
     }
 
     private ClassNodeVo create(final ClassNode node, final Transaction transaction)

@@ -1,4 +1,4 @@
-package com.rdfsonto.infrastructure.client;
+package com.rdfsonto.infrastructure.config.client;
 
 import org.jboss.resteasy.client.jaxrs.ResteasyClientBuilder;
 import org.keycloak.OAuth2Constants;

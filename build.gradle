@@ -26,6 +26,7 @@ dependencies {
 
     implementation 'org.springframework.boot:spring-boot-starter-cache:3.0.6'
     implementation 'org.springframework.cloud:spring-cloud-starter-openfeign:3.1.7'
+    implementation 'org.springframework.boot:spring-boot-starter-webflux:3.0.6'
 
     implementation 'org.springframework.boot:spring-boot-starter-parent:2.7.5'
     implementation 'org.springframework.boot:spring-boot-starter-data-neo4j'
@@ -34,7 +35,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.session:spring-session-core'
 
-    // needs to be added to allow parsing different foramts
+    // needs to be added to allow parsing different formats
     implementation 'org.eclipse.rdf4j:rdf4j-rio-rdfxml:4.2.0'
     implementation 'org.eclipse.rdf4j:rdf4j-rio-turtle:4.2.0'
     implementation 'org.eclipse.rdf4j:rdf4j-rio-ntriples:4.2.0'

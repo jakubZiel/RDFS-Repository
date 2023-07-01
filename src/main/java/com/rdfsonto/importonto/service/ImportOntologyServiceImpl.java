@@ -7,6 +7,7 @@ import static com.rdfsonto.importonto.service.ImportOntologyErrorCode.INVALID_RD
 import static com.rdfsonto.importonto.service.ImportOntologyErrorCode.INVALID_USER_ID;
 
 import java.io.IOException;
+import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.file.Path;
 import java.util.Map;
@@ -15,8 +16,11 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.eclipse.rdf4j.rio.RDFFormat;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.reactive.function.client.WebClient;
 
 import com.rdfsonto.classnode.service.UniqueUriIdHandler;
 import com.rdfsonto.importonto.database.ImportOntologyRepository;
@@ -37,12 +41,14 @@ import lombok.extern.slf4j.Slf4j;
 class ImportOntologyServiceImpl implements ImportOntologyService
 {
     private static final String WORKSPACE_DIR = System.getProperty("user.dir") + "/workspace/";
+    private static final long MAX_ONTOLOGY_FILE_SIZE_BYTES = 30_000_000;
 
     private final UserService userService;
     private final ImportOntologyRepository importOntologyRepository;
     private final ProjectService projectService;
     private final PrefixNodeService prefixNodeService;
     private final UniqueUriIdHandler uniqueUriIdHandler;
+    private final ReferencedResourceHandler referencedResourceHandler;
 
     @Override
     public ImportOntologyResult importOntology(final URL source, final RDFFormat rdfFormat, final Long userId, final Long projectId)
@@ -64,6 +70,7 @@ class ImportOntologyServiceImpl implements ImportOntologyService
         }
 
         final var importResult = importOntology(downloadedOntology);
+        referencedResourceHandler.findAndLabelReferencedResources(projectId);
 
         if (!importResult.getTerminationStatus().equals("OK") || importResult.getTriplesLoaded() <= 0)
         {
@@ -77,20 +84,35 @@ class ImportOntologyServiceImpl implements ImportOntologyService
                                                final ProjectNode project,
                                                final RDFFormat rdfFormat)
     {
-        final var rdf4jDownloader = new RDFImporter();
-
+        final long fileSize = getRemoteFileSize(source);
         final var ontologyTag = projectService.getProjectTag(project);
-        final var outputFile = Path.of(WORKSPACE_DIR + ontologyTag + ".input");
 
         try
         {
-            rdf4jDownloader.prepareRDFFileToMergeIntoNeo4j(source, outputFile, ontologyTag, rdfFormat);
-            importPrefixes(rdf4jDownloader, project.getId());
+            if (fileSize > MAX_ONTOLOGY_FILE_SIZE_BYTES)
+            {
+                final var rdf4jStreamDownloader = new RDFStreamImporter();
 
-            return DownloadedOntology.builder()
-                .withPath(outputFile)
-                .withRdfFormat(rdfFormat)
-                .build();
+                final var outputFile = rdf4jStreamDownloader.getProcessedRdfFileForNeo4j(source, WORKSPACE_DIR, ontologyTag, rdfFormat);
+
+                return DownloadedOntology.builder()
+                    .withPath(outputFile)
+                    .withRdfFormat(rdfFormat)
+                    .build();
+            }
+            else
+            {
+                final var outputFile = Path.of(WORKSPACE_DIR + ontologyTag + ".output");
+                final var rdf4jDownloader = new RDFImporter();
+
+                rdf4jDownloader.prepareRDFFileToMergeIntoNeo4j(source, outputFile, ontologyTag, rdfFormat);
+                importPrefixes(rdf4jDownloader, project.getId());
+
+                return DownloadedOntology.builder()
+                    .withPath(outputFile)
+                    .withRdfFormat(rdfFormat)
+                    .build();
+            }
         }
         catch (final IOException ioException)
         {
@@ -131,5 +153,36 @@ class ImportOntologyServiceImpl implements ImportOntologyService
     private String getWorkspaceDirAbsolutePath(final String localWorkspaceDir)
     {
         return localWorkspaceDir.substring(localWorkspaceDir.indexOf("/workspace"));
+    }
+
+    private Long getRemoteFileSize(final URL source)
+    {
+        final var client = WebClient.create(source.toString());
+        final var headMethod = client.head();
+
+        final var responseHeaders = headMethod.retrieve()
+            .toEntity(String.class)
+            .map(HttpEntity::getHeaders)
+            .block();
+
+        final var contentLength = Optional.ofNullable(responseHeaders).map(HttpHeaders::getContentLength).orElse(-1L);
+
+        return contentLength >= 0 ? contentLength : getRemoteFileSizeHttpConnection(source.toString());
+    }
+
+    private Integer getRemoteFileSizeHttpConnection(final String url)
+    {
+        try
+        {
+            final var connection = (HttpURLConnection) (new URL(url)).openConnection();
+            final var contentLength = connection.getContentLength();
+            connection.disconnect();
+
+            return contentLength;
+        }
+        catch (final IOException ioException)
+        {
+            throw new IllegalStateException("Can not check size of an ontology.");
+        }
     }
 }

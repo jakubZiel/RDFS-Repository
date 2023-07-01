@@ -91,6 +91,13 @@ public interface ClassNodeRepository extends Neo4jRepository<ClassNodeVo, Long>
         """)
     List<ClassNodeVo> findAllClassNodesByPropertyValue(@Param("key") String key, @Param("value") String value, @Param("tag") String tag);
 
+    @Query("""
+        MATCH (n:Resource)
+        WHERE size(labels(n)) = 1 and n.uri CONTAINS $projectTag
+        RETURN n
+        """)
+    List<ClassNodeProjection> findAllDetachedReferencedResources(@Param("projectTag") final String projectTag);
+
     Long countAllByClassLabelsContaining(String projectTag);
 
     Optional<ClassNodeProjection> findByUri(String uri);
