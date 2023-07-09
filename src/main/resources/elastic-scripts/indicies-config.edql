@@ -1,0 +1,35 @@
+PUT /_index_template/prefix-analyzer-template
+{
+  "index_patterns": ["ontology-index-*-*"],
+  "template" : {
+    "settings": {
+      "analysis": {
+        "analyzer": {
+          "default" : {
+            "type" : "custom",
+            "tokenizer" : "standard",
+            "filter" : ["prefix_filter", "lowercase"]
+          }
+        },
+        "filter" : {
+          "prefix_filter" : {
+            "type" : "edge_ngram",
+            "min_gram" : 1,
+            "max_gram" : 10,
+            "preserve_original" : true
+          }
+        }
+      }
+
+    },
+    "mappings": {
+      "_source": {
+        "includes" : ["neo4j_id", "neo4j_uri"]
+      }
+    }
+  },
+  "priority": 500,
+  "_meta": {
+    "description" : "Using custom tokenizer that splits word into prefix tokens and original token."
+  }
+}

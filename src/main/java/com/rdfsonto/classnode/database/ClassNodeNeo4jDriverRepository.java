@@ -3,8 +3,10 @@ package com.rdfsonto.classnode.database;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.ADD_LABEL_TO_ALL_NODES_WITH_ID_IN_NODE_IDS;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.AND;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.CLEAR_PROPERTIES_TEMPLATE;
+import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.COUNT_NODE_KEY;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.CREATE_NODE_TEMPLATE;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.DELETE_ALL_RESOURCE_NODES_WITH_LABEL_TEMPLATE;
+import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.FIND_ALL_NODE_PROPERTIES_BY_PROJECT_LABEL_QUERY_TEMPLATE;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.FIND_ALL_NODE_PROPERTIES_QUERY_TEMPLATE;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.INCOMING_NEIGHBOURS_QUERY_TEMPLATE;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.MATCH_NODE_TEMPLATE;
@@ -34,6 +36,7 @@ import org.neo4j.driver.Query;
 import org.neo4j.driver.Transaction;
 import org.neo4j.driver.Value;
 import org.neo4j.driver.exceptions.Neo4jException;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.neo4j.core.Neo4jTemplate;
 import org.springframework.data.neo4j.repository.query.QueryFragmentsAndParameters;
 import org.springframework.data.util.Pair;
@@ -42,6 +45,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.rdfsonto.classnode.service.ClassNode;
 import com.rdfsonto.classnode.service.FilterCondition;
+import com.rdfsonto.util.database.PaginationClause;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -124,18 +128,62 @@ public class ClassNodeNeo4jDriverRepository
     }
 
     // TODO
-    public List<Long> findAllNodeIdsByPropertiesAndLabels(final List<String> labels, final List<FilterCondition> propertyFilters)
+    public List<Long> findAllNodeIdsByPropertiesAndLabels(final List<String> labels,
+                                                          final List<FilterCondition> propertyFilters,
+                                                          final Pageable page)
+    {
+        final var paginationClause = new PaginationClause(page);
+
+        try (final var session = driver.session())
+        {
+            final var matchClause = buildMatchClause(labels);
+
+            final var whereClause = buildWhereClause(propertyFilters);
+            final var query = matchClause + whereClause + "RETURN node " + paginationClause.createPaginationClause();
+
+            final var queryResult = session.run(query);
+            return queryResult.list(record -> record.get(NODE_KEY).asNode().id());
+        }
+        catch (final Neo4jException exception)
+        {
+            throw new IllegalStateException(exception.getMessage());
+        }
+    }
+
+    public long countNodeIdsByPropertiesAndLabels(final List<String> labels,
+                                                  final List<FilterCondition> propertyFilters)
     {
         try (final var session = driver.session())
         {
             final var matchClause = buildMatchClause(labels);
 
             final var whereClause = buildWhereClause(propertyFilters);
-            final var query = matchClause + whereClause + "RETURN node";
+            final var query = matchClause + whereClause + "RETURN count(node)";
 
             final var queryResult = session.run(query);
 
-            return queryResult.list((record -> record.get(NODE_KEY).asNode().id()));
+            return queryResult.single().get(COUNT_NODE_KEY).asLong();
+        }
+        catch (final Neo4jException exception)
+        {
+            throw new IllegalStateException(exception.getMessage());
+        }
+    }
+
+
+    // TODO - does not return nodes that are 'outside ready', meaning have unique uri's, use UniqueUriHandler in elasticSearch
+    public List<ClassNodeVo> findAllByProject(final String projectLabel, final Pageable page)
+    {
+        final var paginationClause = new PaginationClause(page).createPaginationClause();
+        final var query = FIND_ALL_NODE_PROPERTIES_BY_PROJECT_LABEL_QUERY_TEMPLATE.formatted(projectLabel) + " " + paginationClause;
+
+        try (final var session = driver.session())
+        {
+            final var queryResult = session.run(query);
+
+            return queryResult.list().stream()
+                .map(classNodeVoMapper::mapToVo)
+                .toList();
         }
         catch (final Neo4jException exception)
         {
@@ -238,7 +286,7 @@ public class ClassNodeNeo4jDriverRepository
 
     private String multiValToSingleVal(final String property)
     {
-        return "apoc.text.join(node.`%s`, ' ')".formatted(property);
+        return property.equals("uri") ? "node.uri" : "apoc.text.join(node.`%s`, ' ')".formatted(property);
     }
 
     private void handleRelationshipDiff(final long nodeId,

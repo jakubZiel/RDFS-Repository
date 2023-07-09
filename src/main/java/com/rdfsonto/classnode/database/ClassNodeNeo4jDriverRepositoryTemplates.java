@@ -32,6 +32,11 @@ public class ClassNodeNeo4jDriverRepositoryTemplates
         RETURN id(n) AS id, properties(n) AS properties
         """;
 
+    static final String FIND_ALL_NODE_PROPERTIES_BY_PROJECT_LABEL_QUERY_TEMPLATE = """
+        MATCH (node:Resource:`%s`)
+        RETURN id(node) AS id, properties(node) AS properties, labels(node) as labels
+        """;
+
     // TODO - big ontology got stuck during delete, after splitting it took only 90s
     //:auto MATCH (n:Resource)
     //CALL { WITH n
@@ -48,6 +53,7 @@ public class ClassNodeNeo4jDriverRepositoryTemplates
         RETURN n
         """;
 
+    static final String COUNT_NODE_KEY = "count(node)";
     static final String NEIGHBOUR_RECORD_KEY = "neighbour";
     static final String RELATION_RECORD_KEY = "relation";
     static final String RELATIONSHIP_ID_KEY = "relationshipId";

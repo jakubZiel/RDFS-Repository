@@ -6,13 +6,13 @@ import static com.rdfsonto.classnode.service.ClassNodeExceptionErrorCode.INVALID
 import static com.rdfsonto.classnode.service.ClassNodeExceptionErrorCode.INVALID_PROJECT_ID;
 import static com.rdfsonto.classnode.service.ClassNodeExceptionErrorCode.INVALID_REQUEST;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 import org.apache.commons.lang3.NotImplementedException;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +21,8 @@ import com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepository;
 import com.rdfsonto.classnode.database.ClassNodeProjection;
 import com.rdfsonto.classnode.database.ClassNodeRepository;
 import com.rdfsonto.classnode.database.ClassNodeVo;
+import com.rdfsonto.elastic.service.ElasticSearchClassNode;
+import com.rdfsonto.elastic.service.ElasticSearchClassNodeService;
 import com.rdfsonto.project.service.ProjectService;
 
 import lombok.RequiredArgsConstructor;
@@ -46,6 +48,7 @@ public class ClassNodeServiceImpl implements ClassNodeService
     private final PrefixHandler prefixHandler;
     private final RemovePrefixHandler removePrefixHandler;
     private final ClassNodeValidator classNodeValidator;
+    private final ElasticSearchClassNodeService elasticSearchClassNodeService;
 
     @Override
     public List<ClassNode> findByIds(final long projectId, final List<Long> ids)
@@ -103,9 +106,32 @@ public class ClassNodeServiceImpl implements ClassNodeService
         final var uniqueFilters = nonPrefixedFilters.stream().map(filter -> uriHandler.applyUniqueness(filter, projectTag)).toList();
         //final var uniqueLabels = uriHandler.addUniqueLabel(nonPrefixedLabels, projectTag);
 
-        final var nodeIds = classNodeNeo4jDriverRepository.findAllNodeIdsByPropertiesAndLabels(nonPrefixedLabels, uniqueFilters);
+        final var page = Pageable.ofSize(5_000).withPage(0);
+
+        // TODO - remove
+        // final var nodeIds = classNodeNeo4jDriverRepository.findAllNodeIdsByPropertiesAndLabels(nonPrefixedLabels, uniqueFilters, page);
+        final var nodeIds = elasticSearchClassNodeService.search(project.getOwnerId(), projectId, filters, labels, page).stream()
+            .map(ElasticSearchClassNode::id)
+            .toList();
 
         return findByIds(projectId, nodeIds);
+    }
+
+    @Override
+    public List<ClassNode> findByProject(final long projectId, final Pageable page)
+    {
+        final var projectTag = projectService.findById(projectId)
+            .map(projectService::getProjectTag)
+            .map(uriHandler::getClassNodeLabel)
+            .orElseThrow(() -> new IllegalStateException("Project with id: %s does not exist.".formatted(projectId)));
+
+
+        final var noneUnique = classNodeNeo4jDriverRepository.findAllByProject(projectTag, page).stream()
+            .map(node -> classNodeMapper.mapToDomain(node, null, null))
+            .map(uriRemoveHandler::removeUniqueness)
+            .toList();
+
+        return prefixHandler.applyPrefix(noneUnique, projectId);
     }
 
     @Override
@@ -210,19 +236,26 @@ public class ClassNodeServiceImpl implements ClassNodeService
 
         final var persistedNode = classNodeNeo4jDriverRepository.save(uniqueNode);
 
-        return findById(projectId, persistedNode.getId())
+        final var result = findById(projectId, persistedNode.getId())
             .orElseThrow(() -> new IllegalStateException("Class node with ID: %s is not found after after being saved.".formatted(persistedNode.getId())));
+
+        elasticSearchClassNodeService.save(project.getOwnerId(), projectId, result);
+        return result;
     }
 
     @Override
-    public void deleteById(final long id)
+    public void deleteById(final long projectId, final long id)
     {
-        classNodeRepository.findProjectionById(id)
+        final var project = projectService.findById(projectId)
+            .orElseThrow(() -> new IllegalStateException("Can not delete a node from non-existing project id: %s.".formatted(projectId)));
+
+        final var node = findByIdsLight(projectId, List.of(id)).stream().
+            findAny()
             .orElseThrow(() ->
-                new ClassNodeException("Class node with ID: %s can not be deleted, because it does not exist.".formatted(id),
-                    INVALID_NODE_ID));
+                new ClassNodeException("Class node with ID: %s can not be deleted, because it does not exist.".formatted(id), INVALID_NODE_ID));
 
         classNodeRepository.deleteById(id);
+        elasticSearchClassNodeService.delete(project.getOwnerId(), projectId, node);
     }
 
     //TODO apply uniqueness
@@ -256,6 +289,38 @@ public class ClassNodeServiceImpl implements ClassNodeService
 
         final var nonUniqueMetadata = uriRemoveHandler.removeUniqueness(uniqueMetaData);
         return prefixHandler.applyPrefix(nonUniqueMetadata, projectId);
+    }
+
+    @Override
+    public List<ClassNode> findByIdsLight(final long projectId, final List<Long> ids)
+    {
+        final var projectedNodes = classNodeRepository.findAllByIdIn(ids);
+
+        if (projectedNodes.size() != ids.size())
+        {
+            throw new IllegalStateException("Not all nodes exist");
+        }
+        final var properties = classNodeNeo4jDriverRepository.findAllNodeProperties(ids);
+
+        final var notHydratedNodes = projectedNodes.stream()
+            .map(projectedNode -> ClassNodeVo.builder()
+                .withId(projectedNode.getId())
+                .withUri(projectedNode.getUri())
+                .withClassLabels(projectedNode.getClassLabels())
+                .build())
+            .toList();
+
+        notHydratedNodes.forEach(node -> {
+            final var props = properties.get(node.getId());
+            node.setProperties(props);
+        });
+
+        final var nonPrefixedNodes = notHydratedNodes.stream()
+            .map(node -> classNodeMapper.mapToDomain(node, null, null))
+            .map(uriRemoveHandler::removeUniqueness)
+            .toList();
+
+        return prefixHandler.applyPrefix(nonPrefixedNodes, projectId);
     }
 
     private List<FilterCondition> handleFilterPropertyPrefixes(final List<FilterCondition> filters, final long projectId)

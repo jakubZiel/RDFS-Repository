@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
+import com.rdfsonto.classnode.database.ClassNodePropertiesVoMapper;
 import com.rdfsonto.classnode.database.ClassNodeVo;
 
 

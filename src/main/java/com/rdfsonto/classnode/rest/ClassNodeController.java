@@ -79,10 +79,10 @@ public class ClassNodeController
         return ResponseEntity.ok(classNodeService.save(projectId, nodeUpdate));
     }
 
-    @DeleteMapping("/{id}")
-    ResponseEntity<?> deleteNode(@PathVariable final long id)
+    @DeleteMapping("/{projectId}/{id}")
+    ResponseEntity<?> deleteNode(@PathVariable final long projectId, @PathVariable final long id)
     {
-        classNodeService.deleteById(id);
+        classNodeService.deleteById(projectId, id);
         return ResponseEntity.noContent().build();
     }
 

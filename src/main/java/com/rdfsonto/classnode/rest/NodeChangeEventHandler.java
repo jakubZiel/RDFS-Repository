@@ -46,9 +46,9 @@ public class NodeChangeEventHandler
 
     private NodeChangeEventResponse handleDelete(final NodeChangeEvent deleteEvent)
     {
-        classNodeService.deleteById(deleteEvent.nodeId());
+       /* classNodeService.deleteById(deleteEvent.nodeId(), 0);
         // TODO / TO_DELETE final var isDeleted = classNodeService.findById(deleteEvent.nodeId()).isEmpty();
-
+*/
         return NodeChangeEventResponse.builder()
             .withEvent(deleteEvent)
             //.withFailed(isDeleted)

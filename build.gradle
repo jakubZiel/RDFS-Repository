@@ -28,6 +28,12 @@ dependencies {
     implementation 'org.springframework.cloud:spring-cloud-starter-openfeign:3.1.7'
     implementation 'org.springframework.boot:spring-boot-starter-webflux:3.0.6'
 
+    implementation 'co.elastic.clients:elasticsearch-java:8.8.1'
+    implementation 'org.elasticsearch.client:elasticsearch-rest-client:8.8.1'
+
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.12.3'
+    implementation 'jakarta.json:jakarta.json-api:2.0.1'
+
     implementation 'org.springframework.boot:spring-boot-starter-parent:2.7.5'
     implementation 'org.springframework.boot:spring-boot-starter-data-neo4j'
     implementation 'org.springframework.boot:spring-boot-starter-data-rest'
