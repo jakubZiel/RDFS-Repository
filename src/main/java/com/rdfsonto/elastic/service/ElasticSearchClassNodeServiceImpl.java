@@ -28,8 +28,8 @@ public class ElasticSearchClassNodeServiceImpl implements ElasticSearchClassNode
 {
     private static final String STANDARD_QUERY_ANALYZER = "standard";
     private static final String LABELS_QUERY_ANALYZER = "my_analyzer";
-    private static final String NEO4J_URI_FIELD = "neo4j_uri";
-    private static final String NEO4J_ID_FIELD = "neo4j_id";
+    static final String NEO4J_URI_FIELD = "neo4j_uri";
+    static final String NEO4J_ID_FIELD = "neo4j_id";
     private static final String NEO4J_LABELS_FIELD = "neo4j_labels";
     private static final String INDEX_PREFIX_TEMPLATE = "ontology-index-%s-%s";
     private final ElasticsearchClient elasticsearchClient;

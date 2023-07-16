@@ -41,7 +41,7 @@ import lombok.extern.slf4j.Slf4j;
 class ImportOntologyServiceImpl implements ImportOntologyService
 {
     private static final String WORKSPACE_DIR = System.getProperty("user.dir") + "/workspace/";
-    private static final long MAX_ONTOLOGY_FILE_SIZE_BYTES = 30_000_000;
+    private static final long MAX_ONTOLOGY_FILE_SIZE_BYTES = 40_000_000;
 
     private final UserService userService;
     private final ImportOntologyRepository importOntologyRepository;
