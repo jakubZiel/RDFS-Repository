@@ -6,7 +6,6 @@ import org.springframework.data.domain.Pageable;
 
 import com.rdfsonto.classnode.service.ClassNode;
 import com.rdfsonto.classnode.service.FilterCondition;
-import com.rdfsonto.elastic.model.IndexingResult;
 
 
 public interface ElasticSearchClassNodeService

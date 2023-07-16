@@ -26,10 +26,11 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class ElasticSearchClassNodeServiceImpl implements ElasticSearchClassNodeService
 {
-    static final String QUERY_ANALYZER = "standard";
-    static final String NEO4J_URI_FIELD = "neo4j_uri";
-    static final String NEO4J_ID_FIELD = "neo4j_id";
-    static final String NEO4J_LABELS_FIELD = "neo4j_labels";
+    private static final String STANDARD_QUERY_ANALYZER = "standard";
+    private static final String LABELS_QUERY_ANALYZER = "my_analyzer";
+    private static final String NEO4J_URI_FIELD = "neo4j_uri";
+    private static final String NEO4J_ID_FIELD = "neo4j_id";
+    private static final String NEO4J_LABELS_FIELD = "neo4j_labels";
     private static final String INDEX_PREFIX_TEMPLATE = "ontology-index-%s-%s";
     private final ElasticsearchClient elasticsearchClient;
     private final ElasticSearchClassNodeMapper mapper;
@@ -47,7 +48,7 @@ public class ElasticSearchClassNodeServiceImpl implements ElasticSearchClassNode
 
         final var labelQuery = labels.stream()
             .map(label -> new Query.Builder()
-                .matchPhrase(phrase -> phrase.field(NEO4J_LABELS_FIELD).query(label))
+                .match(match -> match.field(NEO4J_LABELS_FIELD).analyzer(LABELS_QUERY_ANALYZER).query(label))
                 .build())
             .toList();
 
@@ -130,7 +131,6 @@ public class ElasticSearchClassNodeServiceImpl implements ElasticSearchClassNode
         return field
             .replaceFirst("http://", "")
             .replaceFirst("https://", "")
-            .replace('/', '-')
             .replace('.', '_');
     }
 
@@ -147,8 +147,8 @@ public class ElasticSearchClassNodeServiceImpl implements ElasticSearchClassNode
 
         return switch (filter.operator())
         {
-            case EQUALS -> Query.of(q -> q.matchPhrase(p -> p.field(property).query(value).analyzer(QUERY_ANALYZER)));
-            case CONTAINS -> Query.of(q -> q.match(m -> m.field(property).query(value).analyzer(QUERY_ANALYZER)));
+            case EQUALS -> Query.of(q -> q.matchPhrase(p -> p.field(property).query(value).analyzer(STANDARD_QUERY_ANALYZER)));
+            case CONTAINS -> Query.of(q -> q.match(m -> m.field(property).query(value).analyzer(STANDARD_QUERY_ANALYZER)));
             case EXISTS -> Query.of(q -> q.exists(e -> e.field(property)));
             default -> throw new NotImplementedException("Handling of %s is not implemented".formatted(filter.operator()));
         };
