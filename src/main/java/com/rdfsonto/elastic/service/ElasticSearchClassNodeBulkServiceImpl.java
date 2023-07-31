@@ -1,6 +1,5 @@
 package com.rdfsonto.elastic.service;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
@@ -10,16 +9,17 @@ import org.springframework.stereotype.Component;
 
 import com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepository;
 import com.rdfsonto.classnode.service.ClassNodeService;
+import com.rdfsonto.classnode.service.UniqueUriIdHandler;
 import com.rdfsonto.classnode.service.UriUniquenessHandler;
-import com.rdfsonto.project.database.ProjectNode;
-import com.rdfsonto.project.service.ProjectService;
 
 import co.elastic.clients.elasticsearch.ElasticsearchAsyncClient;
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
 import co.elastic.clients.elasticsearch._helpers.bulk.BulkIngester;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class ElasticSearchClassNodeBulkServiceImpl implements ElasticSearchClassNodeBulkService
@@ -31,17 +31,14 @@ public class ElasticSearchClassNodeBulkServiceImpl implements ElasticSearchClass
     private final ElasticsearchClient elasticsearchClient;
     private final ElasticsearchAsyncClient elasticsearchAsyncClient;
     private final ClassNodeNeo4jDriverRepository classNodeNeo4jDriverRepository;
-    private final ProjectService projectService;
     private final UriUniquenessHandler uriUniquenessHandler;
+    private final UniqueUriIdHandler uniqueUriIdHandler;
     private final ClassNodeService classNodeService;
 
     @Override
     public void createIndex(final long userId, final long projectId)
     {
-        final var projectTag = projectService.findById(projectId)
-            .map(projectService::getProjectTag)
-            .orElseThrow(() -> new IllegalStateException("Can not index non existing project."));
-
+        final var projectTag = uniqueUriIdHandler.uniqueUri(userId, projectId);
         final var projectLabel = List.of(uriUniquenessHandler.getClassNodeLabel(projectTag));
 
         final var nodeCount = classNodeNeo4jDriverRepository.countNodeIdsByPropertiesAndLabels(projectLabel, List.of());
@@ -58,33 +55,6 @@ public class ElasticSearchClassNodeBulkServiceImpl implements ElasticSearchClass
             .refresh(refresh -> refresh.index(ElasticSearchClassNodeServiceImpl.getIndexName(userId, projectId)));
 
         bulkIngester.close();
-    }
-
-    @Override
-    public void deleteIndex(final long userId, final long projectId)
-    {
-        final var isDeleted = projectService.findById(projectId).isEmpty();
-
-        if (!isDeleted)
-        {
-            throw new IllegalStateException("Can not delete index of an existing project.");
-        }
-
-        final var deletedProject = ProjectNode.builder()
-            .withId(projectId)
-            .withOwnerId(userId)
-            .build();
-
-        final var projectTag = projectService.getProjectTag(deletedProject);
-
-        try
-        {
-            elasticsearchClient.indices().delete(d -> d.index(projectTag));
-        }
-        catch (final IOException exception)
-        {
-            throw new IllegalStateException("Failed to delete index %s".formatted(projectTag));
-        }
     }
 
     private void handleBulkIndex(final int batchIndex,

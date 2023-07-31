@@ -30,7 +30,7 @@ public class RDFStreamImporter
 
         final var inputStream = handleInputStream(downloadedInputStream, inputURL);
 
-        final var outputStream = new FileOutputStream(processedOntologyFile.toFile());
+        final var outputStream = new FileOutputStream(processedOntologyFile.toFile(), true);
         final var importHandler = new RDFStreamImportHandler(outputStream, rdfFormat, tag);
 
         final var parser = Rio.createParser(rdfFormat);

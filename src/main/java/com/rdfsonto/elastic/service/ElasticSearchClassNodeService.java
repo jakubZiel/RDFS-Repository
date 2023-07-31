@@ -15,4 +15,6 @@ public interface ElasticSearchClassNodeService
     void save(long userId, long projectId, ClassNode classNode);
 
     void delete(long userId, long projectId, ClassNode classNode);
+
+    void deleteIndex(long userId, long projectId);
 }

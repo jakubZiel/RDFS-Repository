@@ -158,11 +158,6 @@ public class RDFExporter extends RDFInputOutput
     {
         final var object = statement.getObject();
 
-        if (object.toString().equals("http://purl.obolibrary.org/obo/@123@123@DOID_0050933"))
-        {
-            System.out.println(statement);
-        }
-
         if (object.isBNode() || object.isLiteral())
         {
             return object;

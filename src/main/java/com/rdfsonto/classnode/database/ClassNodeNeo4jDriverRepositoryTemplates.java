@@ -59,8 +59,28 @@ public class ClassNodeNeo4jDriverRepositoryTemplates
 
     static final String ADD_LABEL_TO_ALL_NODES_WITH_ID_IN_NODE_IDS = """
         MATCH (n:Resource) WHERE id(n) in $nodeIds
-        SET n:%s
+        SET n:`%s`
         RETURN n
+        """;
+
+    static final String PATTERN_MATCHING_INCOMING_LINK = """
+        MATCH (n:Resource:`%s`)<-[r:`%s`]-()
+        """;
+
+    static final String WITH_NODE = """
+        WITH n
+        """;
+
+    static final String PATTERN_MATCHING_OUTGOING_LINK = """
+        MATCH (n:Resource:`%s`)-[r:`%s`]->()
+        """;
+
+    static final String FILTER_BY_NODE_IDS = """
+        WHERE id(n) in $nodeIds
+        """;
+
+    static final String RETURN_NODE_ID = """
+        RETURN id(n) AS id
         """;
 
     static final String COUNT_NODE_KEY = "count(node)";

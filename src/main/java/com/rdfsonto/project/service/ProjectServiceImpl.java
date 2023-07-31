@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepository;
 import com.rdfsonto.classnode.service.UniqueUriIdHandler;
 import com.rdfsonto.classnode.service.UriUniquenessHandler;
+import com.rdfsonto.elastic.service.ElasticSearchClassNodeService;
 import com.rdfsonto.infrastructure.security.service.AuthService;
 import com.rdfsonto.prefix.database.PrefixNodeRepository;
 import com.rdfsonto.project.database.ProjectNode;
@@ -33,6 +34,7 @@ public class ProjectServiceImpl implements ProjectService
     private final UserService userService;
     private final UniqueUriIdHandler uniqueUriIdHandler;
     private final UriUniquenessHandler uriUniquenessHandler;
+    private final ElasticSearchClassNodeService elasticSearchClassNodeService;
 
     @Override
     public Optional<ProjectNode> findById(final long projectId)
@@ -90,8 +92,9 @@ public class ProjectServiceImpl implements ProjectService
         final var projectLabel = uriUniquenessHandler.getClassNodeLabel(getProjectTag(project));
 
         projectRepository.delete(project);
-        classNodeNeo4jDriverRepository.deleteAllNodesByProjectLabel(projectLabel);
         prefixNodeRepository.deleteByProjectId(project.getId());
+        classNodeNeo4jDriverRepository.deleteAllNodesByProjectLabel(projectLabel);
+        elasticSearchClassNodeService.deleteIndex(project.getOwnerId(), project.getId());
     }
 
     @Override

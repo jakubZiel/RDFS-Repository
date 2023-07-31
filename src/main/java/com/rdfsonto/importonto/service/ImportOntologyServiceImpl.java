@@ -23,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import com.rdfsonto.classnode.service.UniqueUriIdHandler;
+import com.rdfsonto.elastic.service.ElasticSearchClassNodeBulkService;
 import com.rdfsonto.importonto.database.ImportOntologyRepository;
 import com.rdfsonto.importonto.database.ImportOntologyResult;
 import com.rdfsonto.prefix.service.PrefixNodeService;
@@ -49,6 +50,7 @@ class ImportOntologyServiceImpl implements ImportOntologyService
     private final PrefixNodeService prefixNodeService;
     private final UniqueUriIdHandler uniqueUriIdHandler;
     private final ReferencedResourceHandler referencedResourceHandler;
+    private final ElasticSearchClassNodeBulkService elasticSearchClassNodeBulkService;
 
     @Override
     public ImportOntologyResult importOntology(final URL source, final RDFFormat rdfFormat, final Long userId, final Long projectId)
@@ -69,6 +71,7 @@ class ImportOntologyServiceImpl implements ImportOntologyService
             throw new ImportOntologyException("Failed to download ontology form URL: %s.".formatted(source), INVALID_ONTOLOGY_URL);
         }
 
+        log.info("Started importing ontology from URL : {}", source);
         final var importResult = importOntology(downloadedOntology);
         referencedResourceHandler.findAndLabelReferencedResources(projectId);
 
@@ -76,6 +79,9 @@ class ImportOntologyServiceImpl implements ImportOntologyService
         {
             throw new ImportOntologyException("Failed to import ontology.", FAILED_ONTOLOGY_IMPORT);
         }
+
+        log.info("Started indexing ontology from URL : {}", source);
+        elasticSearchClassNodeBulkService.createIndex(userId, projectId);
 
         return importResult;
     }

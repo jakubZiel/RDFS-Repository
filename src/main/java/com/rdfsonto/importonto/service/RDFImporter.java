@@ -68,19 +68,14 @@ public class RDFImporter extends RDFInputOutput
         );
         applyUserLabel(tag);
 
-        final var x = outModel.stream().sorted(new Comparator<Statement>()
-        {
-            @Override
-            public int compare(final Statement o1, final Statement o2)
-            {
-                return o1.getSubject().toString().compareTo(o2.getSubject().toString());
-            }
-        }).toList();
+        final var x = outModel.stream()
+            .sorted(Comparator.comparing(o -> o.getSubject().toString()))
+            .toList();
 
         final var name = outputFile.toString();
         final var output = new FileOutputStream(name);
 
-        Rio.write(x, output, RDFFormat.RDFXML);
+        Rio.write(x, output, rdfFormat);
     }
 
     private void applyUserLabel(String label)

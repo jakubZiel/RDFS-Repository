@@ -58,7 +58,6 @@ public class ElasticSearchClassNodeServiceImpl implements ElasticSearchClassNode
             .toList();
 
         final var boolQuery = new BoolQuery.Builder().must(queries);
-
         try
         {
             final var hits = elasticsearchClient.search(search -> search
@@ -109,6 +108,20 @@ public class ElasticSearchClassNodeServiceImpl implements ElasticSearchClassNode
         catch (IOException e)
         {
             throw new IllegalStateException("Failed to delete indexed document.");
+        }
+    }
+
+    @Override
+    public void deleteIndex(final long userId, final long projectId)
+    {
+        final var index = getIndexName(userId, projectId);
+        try
+        {
+            elasticsearchClient.indices().delete(d -> d.index(index));
+        }
+        catch (final Exception exception)
+        {
+            log.error("Failed to delete index %s".formatted(index));
         }
     }
 

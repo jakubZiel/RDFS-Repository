@@ -65,6 +65,7 @@ public class UriUniquenessHandler
     private Map<String, Object> applyUniqueness(final Map<String, Object> properties, final String projectTag)
     {
         return Optional.ofNullable(properties).map(nonNullProperties -> nonNullProperties.entrySet().stream()
+                // TODO what if property is declared in a file, it should resolve to unique uri
                 .map(property -> Map.entry(applyUniqueness(property.getKey(), projectTag, false), property.getValue()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)))
             .orElse(null);

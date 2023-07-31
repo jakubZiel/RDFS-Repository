@@ -1,6 +1,6 @@
 package com.rdfsonto.classnode.database;
 
-enum RelationshipDirection
+public enum RelationshipDirection
 {
     INCOMING, OUTGOING
 }
