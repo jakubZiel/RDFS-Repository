@@ -14,7 +14,7 @@ services:
       - ./neo4j/plugins:/plugins
       - ../workspace:/workspace
     environment:
-      - NEO4JLABS_PLUGINS=["apoc", "n10s"]
+      - NEO4J_PLUGINS=["apoc", "n10s"]
       - NEO4J_AUTH=neo4j/kuba123
     
   postgres:

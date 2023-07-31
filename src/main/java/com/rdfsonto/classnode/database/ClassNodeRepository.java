@@ -61,6 +61,11 @@ public interface ClassNodeRepository extends Neo4jRepository<ClassNodeVo, Long>
     List<Object> getAllNodeValues(@Param("nodeId") long id);
 
     // TODO needs to be cached, and changed to go after all nodes
+    /*
+    correct way - about 2.2s for 2.3m, and 4.5m relationships
+    match (n:Resource:`http://www.user_neo4j.com#@34@35@`)-[r]->()
+    return count(type(r)), type(r)
+     */
     @Query("""
         CALL db.relationshipTypes()
         YIELD relationshipType
@@ -76,6 +81,12 @@ public interface ClassNodeRepository extends Neo4jRepository<ClassNodeVo, Long>
     List<String> findAllLabels(String projectTag);
 
     // TODO needs to be cached
+    /*
+    correct way - about 1.5s for 2.3m nodes
+    match (n:Resource:`http://www.user_neo4j.com#@34@35@`) with n
+    unwind keys(n) as prop
+    return count(prop), prop
+     */
     @Query("""
         MATCH(n:Resource)
         WITH DISTINCT(keys(n)) as key_sets

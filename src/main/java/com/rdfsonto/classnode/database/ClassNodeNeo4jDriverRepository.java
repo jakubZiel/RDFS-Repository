@@ -1,11 +1,14 @@
 package com.rdfsonto.classnode.database;
 
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.ADD_LABEL_TO_ALL_NODES_WITH_ID_IN_NODE_IDS;
+import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.ALL_INCOMING_NEIGHBOURS_QUERY_TEMPLATE;
+import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.ALL_OUTGOING_NEIGHBOURS_QUERY_TEMPLATE;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.AND;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.CLEAR_PROPERTIES_TEMPLATE;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.COUNT_NODE_KEY;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.CREATE_NODE_TEMPLATE;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.DELETE_ALL_RESOURCE_NODES_WITH_LABEL_TEMPLATE;
+import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.FILTER_BY_NODE_IDS;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.FIND_ALL_NODE_PROPERTIES_BY_PROJECT_LABEL_QUERY_TEMPLATE;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.FIND_ALL_NODE_PROPERTIES_QUERY_TEMPLATE;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.INCOMING_NEIGHBOURS_QUERY_TEMPLATE;
@@ -15,12 +18,16 @@ import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemp
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.NODE_ID_KEY;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.NODE_KEY;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.OUTGOING_NEIGHBOURS_QUERY_TEMPLATE;
+import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.PATTERN_MATCHING_INCOMING_LINK;
+import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.PATTERN_MATCHING_OUTGOING_LINK;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.RELATIONSHIP_ID_KEY;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.RELATION_RECORD_KEY;
+import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.RETURN_NODE_ID;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.SET_NODE_PROPERTIES_TEMPLATE;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.SET_PROPERTY_TEMPLATE;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.SOURCE_NODE_ID_RECORD_KEY;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.URI_KEY;
+import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.WITH_NODE;
 
 import java.util.Collections;
 import java.util.List;
@@ -37,6 +44,7 @@ import org.neo4j.driver.Transaction;
 import org.neo4j.driver.Value;
 import org.neo4j.driver.exceptions.Neo4jException;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.neo4j.core.Neo4jClient;
 import org.springframework.data.neo4j.core.Neo4jTemplate;
 import org.springframework.data.neo4j.repository.query.QueryFragmentsAndParameters;
 import org.springframework.data.util.Pair;
@@ -45,6 +53,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.rdfsonto.classnode.service.ClassNode;
 import com.rdfsonto.classnode.service.FilterCondition;
+import com.rdfsonto.classnode.service.PatternFilter;
 import com.rdfsonto.util.database.PaginationClause;
 
 import lombok.RequiredArgsConstructor;
@@ -56,8 +65,11 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class ClassNodeNeo4jDriverRepository
 {
+    private final static String EMPTY_COMMAND = "";
+    private final static String TARGET_DATABASE = "neo4j";
     private final Driver driver;
     private final Neo4jTemplate neo4jTemplate;
+    private final Neo4jClient neo4jClient;
     private final RelationshipNeo4jDriverRepository relationshipNeo4jDriverRepository;
     private final ClassNodeRepository classNodeRepository;
 
@@ -74,11 +86,11 @@ public class ClassNodeNeo4jDriverRepository
                 .map(ClassNodeProjection::getId)
                 .orElseGet(() -> create(updateNode, transaction).getId());
 
-            final Set<RelationshipVo> incomingLinks = findAllIncomingNeighbours(List.of(nodeId)).stream()
+            final Set<RelationshipVo> incomingLinks = findAllIncomingNeighbours(List.of(nodeId), false).stream()
                 .map(nodeConnection -> relationshipVoMapper.mapToVo(nodeConnection, updateNode.id(), true))
                 .collect(Collectors.toSet());
 
-            final Set<RelationshipVo> outgoingLinks = findAllOutgoingNeighbours(List.of(nodeId)).stream()
+            final Set<RelationshipVo> outgoingLinks = findAllOutgoingNeighbours(List.of(nodeId), false).stream()
                 .map(nodeConnection -> relationshipVoMapper.mapToVo(nodeConnection, updateNode.id(), false))
                 .collect(Collectors.toSet());
 
@@ -99,14 +111,14 @@ public class ClassNodeNeo4jDriverRepository
         }
     }
 
-    public List<ClassNodeVo> findAllIncomingNeighbours(final List<Long> ids)
+    public List<ClassNodeVo> findAllIncomingNeighbours(final List<Long> ids, final boolean relationOnlyBetweenFetched)
     {
-        return findNeighbours(ids, RelationshipDirection.INCOMING);
+        return findNeighbours(ids, RelationshipDirection.INCOMING, relationOnlyBetweenFetched);
     }
 
-    public List<ClassNodeVo> findAllOutgoingNeighbours(final List<Long> ids)
+    public List<ClassNodeVo> findAllOutgoingNeighbours(final List<Long> ids, final boolean relationOnlyBetweenFetched)
     {
-        return findNeighbours(ids, RelationshipDirection.OUTGOING);
+        return findNeighbours(ids, RelationshipDirection.OUTGOING, relationOnlyBetweenFetched);
     }
 
     public Map<Long, Map<String, Object>> findAllNodeProperties(final List<Long> ids)
@@ -170,7 +182,6 @@ public class ClassNodeNeo4jDriverRepository
         }
     }
 
-
     // TODO - does not return nodes that are 'outside ready', meaning have unique uri's, use UniqueUriHandler in elasticSearch
     public List<ClassNodeVo> findAllByProject(final String projectLabel, final Pageable page)
     {
@@ -191,20 +202,52 @@ public class ClassNodeNeo4jDriverRepository
         }
     }
 
-    @Transactional
     public void deleteAllNodesByProjectLabel(final String projectLabel)
     {
-        final var query = DELETE_ALL_RESOURCE_NODES_WITH_LABEL_TEMPLATE.formatted(projectLabel);
-        neo4jTemplate.toExecutableQuery(ClassNodeVo.class, new QueryFragmentsAndParameters(query, Map.of())).getResults();
+        try
+        {
+            final var query = DELETE_ALL_RESOURCE_NODES_WITH_LABEL_TEMPLATE.formatted(projectLabel);
+            driver.session().run(query);
+        }
+        catch (final Exception exception)
+        {
+            log.error("Failed to completely delete an ontology with projectLabel: %s, should be handled by DBA.".formatted(projectLabel));
+        }
     }
 
     @Transactional
     public void batchAddLabel(final List<Long> nodeIds, final String projectTag)
     {
-        final var query = ADD_LABEL_TO_ALL_NODES_WITH_ID_IN_NODE_IDS.formatted(projectTag);
+                                                                                        final var query = ADD_LABEL_TO_ALL_NODES_WITH_ID_IN_NODE_IDS.formatted(projectTag);
         final var parameters = Map.of(NODE_IDS_KEY, (Object) nodeIds);
 
         neo4jTemplate.toExecutableQuery(ClassNodeVo.class, new QueryFragmentsAndParameters(query, parameters)).getResults();
+    }
+
+    public List<Long> findByPattern(final List<PatternFilter> patternFilters, final String projectLabel, final List<Long> nodeIds)
+    {
+        if (patternFilters == null || patternFilters.isEmpty())
+        {
+            return List.of();
+        }
+
+        final var patterns = patternFilters.stream()
+            .map(pattern -> pattern.getDirection() == RelationshipDirection.OUTGOING ?
+                PATTERN_MATCHING_OUTGOING_LINK.formatted(projectLabel, pattern.getRelationshipName()) :
+                PATTERN_MATCHING_INCOMING_LINK.formatted(projectLabel, pattern.getRelationshipName()))
+            .collect(Collectors.joining(WITH_NODE));
+
+        final var filterByNodeId = nodeIds.isEmpty() ? EMPTY_COMMAND : FILTER_BY_NODE_IDS;
+
+        final var query = patterns + filterByNodeId + RETURN_NODE_ID;
+
+        return neo4jClient.query(query)
+            .in(TARGET_DATABASE)
+            .bind(nodeIds).to(NODE_IDS_KEY)
+            .fetchAs(Long.class)
+            .mappedBy((typeSystem, record) -> record.get(NODE_ID_KEY).asLong())
+            .all().stream()
+            .toList();
     }
 
     private ClassNodeVo create(final ClassNode node, final Transaction transaction)
@@ -215,11 +258,13 @@ public class ClassNodeNeo4jDriverRepository
         return classNodeVoMapper.mapToVo(result.get(NODE_KEY).asNode(), null, null, null);
     }
 
-    private List<ClassNodeVo> findNeighbours(final List<Long> ids, final RelationshipDirection relationshipDirection)
+    private List<ClassNodeVo> findNeighbours(final List<Long> ids,
+                                             final RelationshipDirection relationshipDirection,
+                                             final boolean relationOnlyBetweenFetched)
     {
         final var query = relationshipDirection == RelationshipDirection.INCOMING ?
-            INCOMING_NEIGHBOURS_QUERY_TEMPLATE :
-            OUTGOING_NEIGHBOURS_QUERY_TEMPLATE;
+            relationOnlyBetweenFetched ? INCOMING_NEIGHBOURS_QUERY_TEMPLATE : ALL_INCOMING_NEIGHBOURS_QUERY_TEMPLATE :
+            relationOnlyBetweenFetched ? OUTGOING_NEIGHBOURS_QUERY_TEMPLATE : ALL_OUTGOING_NEIGHBOURS_QUERY_TEMPLATE;
 
         if (ids == null || ids.isEmpty())
         {

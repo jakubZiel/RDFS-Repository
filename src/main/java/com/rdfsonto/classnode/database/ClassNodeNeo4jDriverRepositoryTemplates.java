@@ -18,14 +18,26 @@ public class ClassNodeNeo4jDriverRepositoryTemplates
         node.`%s` = $param%s""";
     static final String OUTGOING_NEIGHBOURS_QUERY_TEMPLATE = """
         MATCH (n:Resource)-[rel]->(neighbour:Resource)
-        WHERE id(n) IN $nodeIds
+        WHERE id(n) IN $nodeIds AND id(neighbour) in $nodeIds
         RETURN neighbour, id(n) AS source, type(rel) AS relation, id(rel) AS relationshipId
         """;
     static final String INCOMING_NEIGHBOURS_QUERY_TEMPLATE = """
         MATCH (n:Resource)<-[rel]-(neighbour:Resource)
+        WHERE id(n) IN $nodeIds AND id(neighbour) in $nodeIds
+        RETURN neighbour, id(n) AS source, type(rel) AS relation, id(rel) AS relationshipId
+        """;
+
+    static final String ALL_OUTGOING_NEIGHBOURS_QUERY_TEMPLATE = """
+        MATCH (n:Resource)-[rel]->(neighbour:Resource)
         WHERE id(n) IN $nodeIds
         RETURN neighbour, id(n) AS source, type(rel) AS relation, id(rel) AS relationshipId
         """;
+    static final String ALL_INCOMING_NEIGHBOURS_QUERY_TEMPLATE = """
+        MATCH (n:Resource)<-[rel]-(neighbour:Resource)
+        WHERE id(n) IN $nodeIds
+        RETURN neighbour, id(n) AS source, type(rel) AS relation, id(rel) AS relationshipId
+        """;
+
     static final String FIND_ALL_NODE_PROPERTIES_QUERY_TEMPLATE = """
         UNWIND $nodeIds AS nodeId
         MATCH (n:Resource) WHERE id(n) = nodeId
@@ -37,14 +49,12 @@ public class ClassNodeNeo4jDriverRepositoryTemplates
         RETURN id(node) AS id, properties(node) AS properties, labels(node) as labels
         """;
 
-    // TODO - big ontology got stuck during delete, after splitting it took only 90s
-    //:auto MATCH (n:Resource)
-    //CALL { WITH n
-    //DETACH DELETE n
-    //} IN TRANSACTIONS OF 10000 ROWS;
-    // MASS DELETE NEO4J
     static final String DELETE_ALL_RESOURCE_NODES_WITH_LABEL_TEMPLATE = """
-        MATCH (n:Resource:`%s`) DETACH DELETE n
+        MATCH (n:Resource:`%s`)
+        CALL {
+            WITH n
+            DETACH DELETE n
+            } IN TRANSACTIONS OF 10000 ROWS;
         """;
 
     static final String ADD_LABEL_TO_ALL_NODES_WITH_ID_IN_NODE_IDS = """

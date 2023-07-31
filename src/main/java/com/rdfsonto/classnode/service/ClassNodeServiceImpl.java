@@ -61,8 +61,8 @@ public class ClassNodeServiceImpl implements ClassNodeService
         }
         final var properties = classNodeNeo4jDriverRepository.findAllNodeProperties(ids);
 
-        final var incoming = classNodeNeo4jDriverRepository.findAllIncomingNeighbours(ids);
-        final var outgoing = classNodeNeo4jDriverRepository.findAllOutgoingNeighbours(ids);
+        final var incoming = classNodeNeo4jDriverRepository.findAllIncomingNeighbours(ids, true);
+        final var outgoing = classNodeNeo4jDriverRepository.findAllOutgoingNeighbours(ids, true);
 
         final var groupedIncoming = incoming.stream().collect(Collectors.groupingBy(ClassNodeVo::getSource));
         final var groupedOutgoing = outgoing.stream().collect(Collectors.groupingBy(ClassNodeVo::getSource));
@@ -92,7 +92,10 @@ public class ClassNodeServiceImpl implements ClassNodeService
     }
 
     @Override
-    public List<ClassNode> findByPropertiesAndLabels(final long projectId, final List<String> labels, final List<FilterCondition> filters)
+    public List<ClassNode> findByPropertiesAndLabels(final long projectId,
+                                                     final List<String> labels,
+                                                     final List<FilterCondition> filters,
+                                                     final Pageable pageable)
     {
         final var project = projectService.findById(projectId)
             .orElseThrow(() -> new ClassNodeException(
@@ -106,15 +109,13 @@ public class ClassNodeServiceImpl implements ClassNodeService
         final var uniqueFilters = nonPrefixedFilters.stream().map(filter -> uriHandler.applyUniqueness(filter, projectTag)).toList();
         //final var uniqueLabels = uriHandler.addUniqueLabel(nonPrefixedLabels, projectTag);
 
-        final var page = Pageable.ofSize(5_000).withPage(0);
-
         // TODO - remove
         // final var nodeIds = classNodeNeo4jDriverRepository.findAllNodeIdsByPropertiesAndLabels(nonPrefixedLabels, uniqueFilters, page);
-        final var nodeIds = elasticSearchClassNodeService.search(project.getOwnerId(), projectId, filters, labels, page).stream()
+        final var nodeIds = elasticSearchClassNodeService.search(project.getOwnerId(), projectId, filters, labels, pageable).stream()
             .map(ElasticSearchClassNode::id)
             .toList();
 
-        return findByIds(projectId, nodeIds);
+        return findByIdsLight(projectId, nodeIds);
     }
 
     @Override
@@ -124,7 +125,6 @@ public class ClassNodeServiceImpl implements ClassNodeService
             .map(projectService::getProjectTag)
             .map(uriHandler::getClassNodeLabel)
             .orElseThrow(() -> new IllegalStateException("Project with id: %s does not exist.".formatted(projectId)));
-
 
         final var noneUnique = classNodeNeo4jDriverRepository.findAllByProject(projectTag, page).stream()
             .map(node -> classNodeMapper.mapToDomain(node, null, null))
@@ -155,8 +155,8 @@ public class ClassNodeServiceImpl implements ClassNodeService
         notHydratedNode.setProperties(properties.get(id));
 
         final var nodeId = List.of(id);
-        final var incoming = classNodeNeo4jDriverRepository.findAllIncomingNeighbours(nodeId);
-        final var outgoing = classNodeNeo4jDriverRepository.findAllOutgoingNeighbours(nodeId);
+        final var incoming = classNodeNeo4jDriverRepository.findAllIncomingNeighbours(nodeId, false);
+        final var outgoing = classNodeNeo4jDriverRepository.findAllOutgoingNeighbours(nodeId, false);
 
         return Optional.of(classNodeMapper.mapToDomain(notHydratedNode, incoming, outgoing))
             .map(uriRemoveHandler::removeUniqueness)
