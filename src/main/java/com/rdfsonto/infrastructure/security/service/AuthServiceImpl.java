@@ -1,10 +1,14 @@
 package com.rdfsonto.infrastructure.security.service;
 
+import java.util.Collection;
+
+import org.apache.commons.lang3.NotImplementedException;
 import org.keycloak.KeycloakPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 import com.rdfsonto.project.database.ProjectNode;
+import com.rdfsonto.user.database.UserNode;
 import com.rdfsonto.user.service.UserService;
 
 import lombok.RequiredArgsConstructor;
@@ -42,7 +46,7 @@ class AuthServiceImpl implements AuthService
             return validateProjectRights(resourceId, userId);
         }
 
-        return false;
+        throw new NotImplementedException("Handling of resource type: %s is not implemented.".formatted(resourceType.getName()));
     }
 
     private boolean validateProjectRights(final Long projectId, final Long userId)
@@ -55,29 +59,16 @@ class AuthServiceImpl implements AuthService
             return false;
         }
 
-        final var user = userService.findById(userId);
-
-        if (user.isEmpty())
-        {
-            return false;
-        }
-
-        final var validUser = user.get();
-
         final var subject = keycloakPrincipal
             .getKeycloakSecurityContext()
             .getToken()
             .getSubject();
 
-        if (!validUser.getKeycloakId().equals(subject))
-        {
-            return false;
-        }
-
-        final var requestedProject = validUser.getProjectSet().stream()
-            .filter(project -> project.getId().equals(projectId))
-            .findFirst();
-
-        return requestedProject.isPresent();
+        return userService.findById(userId).stream()
+            .filter(u -> u.getKeycloakId().equals(subject))
+            .map(UserNode::getProjectSet)
+            .flatMap(Collection::stream)
+            .map(ProjectNode::getId)
+            .anyMatch(id -> id.equals(projectId));
     }
 }

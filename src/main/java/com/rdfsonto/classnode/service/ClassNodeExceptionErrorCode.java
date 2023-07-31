@@ -11,4 +11,5 @@ public enum ClassNodeExceptionErrorCode
     INVALID_REQUEST,
     INTERNAL_ERROR,
     INVALID_PREFIX,
+    UNAUTHORIZED_RESOURCE_ACCESS
 }
