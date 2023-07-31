@@ -3,6 +3,8 @@ package com.rdfsonto.classnode.rest;
 import java.util.Collections;
 import java.util.List;
 
+import org.springframework.data.domain.Pageable;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -19,6 +21,8 @@ import com.rdfsonto.classnode.service.ClassNode;
 import com.rdfsonto.classnode.service.ClassNodeException;
 import com.rdfsonto.classnode.service.ClassNodeExceptionErrorCode;
 import com.rdfsonto.classnode.service.ClassNodeService;
+import com.rdfsonto.infrastructure.security.service.AuthService;
+import com.rdfsonto.project.database.ProjectNode;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,6 +34,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/neo4j/class")
 public class ClassNodeController
 {
+    private final AuthService authService;
     private final ClassNodeService classNodeService;
     private final NodeChangeEventHandler nodeChangeEventHandler;
 
@@ -103,24 +108,30 @@ public class ClassNodeController
     }
 
     @PostMapping("/filter")
-    ResponseEntity<?> getNodesFiltered(@RequestBody final FilterPropertyRequest request)
+    ResponseEntity<?> getNodesFiltered(@RequestBody final FilterPropertyRequest request, final Pageable pageable)
     {
+        // TODO validation aspect
+        authService.validateResourceRights(request.projectId(), 1000L, ProjectNode.class);
+        // TODO handle pageable
         return ResponseEntity.ok(
             classNodeService.findByPropertiesAndLabels(
                 request.projectId(),
                 request.labels(),
-                request.filterConditions()));
+                request.filterConditions(),
+                pageable));
     }
 
     @ExceptionHandler(ClassNodeException.class)
     public ResponseEntity<?> handle(final ClassNodeException classNodeException)
     {
-        // TODO REMOVE
-        classNodeException.printStackTrace();
-
         if (classNodeException.getErrorCode() == ClassNodeExceptionErrorCode.INTERNAL_ERROR)
         {
             return ResponseEntity.internalServerError().build();
+        }
+
+        if (classNodeException.getErrorCode() == ClassNodeExceptionErrorCode.UNAUTHORIZED_RESOURCE_ACCESS)
+        {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(classNodeException.getMessage());
         }
 
         log.warn(classNodeException.getMessage());
