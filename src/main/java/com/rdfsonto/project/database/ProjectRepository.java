@@ -39,4 +39,12 @@ public interface ProjectRepository extends Neo4jRepository<ProjectNode, Long>
         RETURN p, id(u) as ownerId
         """)
     Optional<ProjectNode> findById(@NonNull Long projectId);
+
+    @Query("""
+        MATCH (p:Project) where id(p) = $projectId
+        SET p.time = $time, p.file = $file
+        """)
+    void saveSnapshot(@Param("projectId") final long projectId,
+                      @Param("time") final long snapshotTime,
+                      @Param("file") final String snapshotFile);
 }

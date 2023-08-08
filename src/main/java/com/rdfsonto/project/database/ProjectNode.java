@@ -19,7 +19,7 @@ import lombok.Setter;
 @Setter
 @Getter
 @EqualsAndHashCode
-@Builder(setterPrefix = "with")
+@Builder(setterPrefix = "with", toBuilder = true)
 public class ProjectNode
 {
     @Id
@@ -27,6 +27,9 @@ public class ProjectNode
     private final Long id;
 
     private Long ownerId;
+
+    private Long snapshotTime;
+    private String snapshotFile;
 
     @Property("name")
     @EqualsAndHashCode.Exclude

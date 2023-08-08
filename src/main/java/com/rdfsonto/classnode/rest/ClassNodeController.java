@@ -22,7 +22,6 @@ import com.rdfsonto.classnode.service.ClassNodeException;
 import com.rdfsonto.classnode.service.ClassNodeExceptionErrorCode;
 import com.rdfsonto.classnode.service.ClassNodeService;
 import com.rdfsonto.infrastructure.security.service.AuthService;
-import com.rdfsonto.project.database.ProjectNode;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -110,15 +109,20 @@ public class ClassNodeController
     @PostMapping("/filter")
     ResponseEntity<?> getNodesFiltered(@RequestBody final FilterPropertyRequest request, final Pageable pageable)
     {
+        final var found = classNodeService.findByPropertiesAndLabels(
+            request.projectId(),
+            request.labels(),
+            request.filterConditions(),
+            request.patterns(),
+            pageable);
         // TODO validation aspect
-        authService.validateResourceRights(request.projectId(), 1000L, ProjectNode.class);
-        // TODO handle pageable
-        return ResponseEntity.ok(
-            classNodeService.findByPropertiesAndLabels(
-                request.projectId(),
-                request.labels(),
-                request.filterConditions(),
-                pageable));
+        return ResponseEntity.ok(found);
+    }
+
+    @GetMapping("/traverse/{id}")
+    ResponseEntity<?> getNextNodeTraversals(@PathVariable final long id, @RequestParam final long projectId)
+    {
+        return ResponseEntity.ok().build();
     }
 
     @ExceptionHandler(ClassNodeException.class)

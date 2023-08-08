@@ -18,6 +18,7 @@ import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemp
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.NODE_ID_KEY;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.NODE_KEY;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.OUTGOING_NEIGHBOURS_QUERY_TEMPLATE;
+import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.PATTERN_MATCHING_ANY_LINK;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.PATTERN_MATCHING_INCOMING_LINK;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.PATTERN_MATCHING_OUTGOING_LINK;
 import static com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepositoryTemplates.RELATIONSHIP_ID_KEY;
@@ -188,18 +189,11 @@ public class ClassNodeNeo4jDriverRepository
         final var paginationClause = new PaginationClause(page).createPaginationClause();
         final var query = FIND_ALL_NODE_PROPERTIES_BY_PROJECT_LABEL_QUERY_TEMPLATE.formatted(projectLabel) + " " + paginationClause;
 
-        try (final var session = driver.session())
-        {
-            final var queryResult = session.run(query);
-
-            return queryResult.list().stream()
-                .map(classNodeVoMapper::mapToVo)
-                .toList();
-        }
-        catch (final Neo4jException exception)
-        {
-            throw new IllegalStateException(exception.getMessage());
-        }
+        return neo4jClient.query(query)
+            .fetchAs(ClassNodeVo.class)
+            .mappedBy((system, record) -> classNodeVoMapper.mapToVo(record)).all()
+            .stream()
+            .toList();
     }
 
     public void deleteAllNodesByProjectLabel(final String projectLabel)
@@ -218,23 +212,27 @@ public class ClassNodeNeo4jDriverRepository
     @Transactional
     public void batchAddLabel(final List<Long> nodeIds, final String projectTag)
     {
-                                                                                        final var query = ADD_LABEL_TO_ALL_NODES_WITH_ID_IN_NODE_IDS.formatted(projectTag);
+        final var query = ADD_LABEL_TO_ALL_NODES_WITH_ID_IN_NODE_IDS.formatted(projectTag);
         final var parameters = Map.of(NODE_IDS_KEY, (Object) nodeIds);
 
         neo4jTemplate.toExecutableQuery(ClassNodeVo.class, new QueryFragmentsAndParameters(query, parameters)).getResults();
     }
 
+    @Transactional
     public List<Long> findByPattern(final List<PatternFilter> patternFilters, final String projectLabel, final List<Long> nodeIds)
     {
         if (patternFilters == null || patternFilters.isEmpty())
         {
-            return List.of();
+            return nodeIds;
         }
 
         final var patterns = patternFilters.stream()
-            .map(pattern -> pattern.getDirection() == RelationshipDirection.OUTGOING ?
-                PATTERN_MATCHING_OUTGOING_LINK.formatted(projectLabel, pattern.getRelationshipName()) :
-                PATTERN_MATCHING_INCOMING_LINK.formatted(projectLabel, pattern.getRelationshipName()))
+            .map(pattern -> switch (pattern.getDirection())
+            {
+                case OUTGOING -> PATTERN_MATCHING_OUTGOING_LINK.formatted(projectLabel, pattern.getRelationshipName());
+                case INCOMING -> PATTERN_MATCHING_INCOMING_LINK.formatted(projectLabel, pattern.getRelationshipName());
+                case ANY -> PATTERN_MATCHING_ANY_LINK.formatted(projectLabel, pattern.getRelationshipName());
+            })
             .collect(Collectors.joining(WITH_NODE));
 
         final var filterByNodeId = nodeIds.isEmpty() ? EMPTY_COMMAND : FILTER_BY_NODE_IDS;
@@ -242,7 +240,6 @@ public class ClassNodeNeo4jDriverRepository
         final var query = patterns + filterByNodeId + RETURN_NODE_ID;
 
         return neo4jClient.query(query)
-            .in(TARGET_DATABASE)
             .bind(nodeIds).to(NODE_IDS_KEY)
             .fetchAs(Long.class)
             .mappedBy((typeSystem, record) -> record.get(NODE_ID_KEY).asLong())
