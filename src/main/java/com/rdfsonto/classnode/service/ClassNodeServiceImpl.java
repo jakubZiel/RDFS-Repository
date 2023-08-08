@@ -95,6 +95,7 @@ public class ClassNodeServiceImpl implements ClassNodeService
     public List<ClassNode> findByPropertiesAndLabels(final long projectId,
                                                      final List<String> labels,
                                                      final List<FilterCondition> filters,
+                                                     final List<PatternFilter> patterns,
                                                      final Pageable pageable)
     {
         final var project = projectService.findById(projectId)
@@ -102,18 +103,21 @@ public class ClassNodeServiceImpl implements ClassNodeService
                 "Project with ID: %s does not exist, can not filter nodes.".formatted(projectId),
                 INVALID_PROJECT_ID));
 
-        final var nonPrefixedLabels = removePrefixHandler.removePrefix(labels, projectId);
         final var nonPrefixedFilters = handleFilterPropertyPrefixes(filters, projectId);
 
         final var projectTag = projectService.getProjectTag(project);
         final var uniqueFilters = nonPrefixedFilters.stream().map(filter -> uriHandler.applyUniqueness(filter, projectTag)).toList();
-        //final var uniqueLabels = uriHandler.addUniqueLabel(nonPrefixedLabels, projectTag);
 
-        // TODO - remove
-        // final var nodeIds = classNodeNeo4jDriverRepository.findAllNodeIdsByPropertiesAndLabels(nonPrefixedLabels, uniqueFilters, page);
-        final var nodeIds = elasticSearchClassNodeService.search(project.getOwnerId(), projectId, filters, labels, pageable).stream()
+        final var filteredNodeIds = elasticSearchClassNodeService.search(project.getOwnerId(), projectId, filters, labels, pageable).stream()
             .map(ElasticSearchClassNode::id)
             .toList();
+
+        final var uniquePatterns = patterns.stream()
+            .map(pattern -> pattern.toBuilder()
+                .withRelationshipName(uriHandler.applyUniqueness(pattern.getRelationshipName(), projectTag, true))
+                .build());
+
+        final var nodeIds = classNodeNeo4jDriverRepository.findByPattern(patterns, uriHandler.getClassNodeLabel(projectTag), filteredNodeIds);
 
         return findByIdsLight(projectId, nodeIds);
     }
@@ -137,7 +141,7 @@ public class ClassNodeServiceImpl implements ClassNodeService
     @Override
     public Optional<ClassNode> findById(final long projectId, final Long id)
     {
-        final var notHydratedNodeProjection = classNodeRepository.findProjectionById(id);
+        final var notHydratedNodeProjection = classNodeRepository.findAllByIdIn(List.of(id)).stream().findFirst();
 
         if (notHydratedNodeProjection.isEmpty())
         {
@@ -266,10 +270,10 @@ public class ClassNodeServiceImpl implements ClassNodeService
             .orElseThrow(() -> new ClassNodeException("Not mete data for non existing project with ID: %s".formatted(projectId), INVALID_PROJECT_ID));
 
         final var projectTag = projectService.getProjectTag(project);
-        final var projectLabel = uriHandler.getClassNodeLabel(projectTag);
 
-        final var propertyKeys = classNodeRepository.findAllPropertyKeys(projectLabel).stream()
+        final var propertyKeys = classNodeRepository.findAllPropertyKeysFast(projectTag).stream()
             .filter(property -> property.startsWith("http") || property.equals("uri"))
+            .sorted()
             .toList();
 
         final var labels = classNodeRepository.findAllLabels(projectTag).stream()
@@ -279,6 +283,7 @@ public class ClassNodeServiceImpl implements ClassNodeService
 
         final var relationshipTypes = classNodeRepository.findAllRelationshipTypes(projectTag).stream()
             .filter(relationship -> relationship.startsWith("http"))
+            .sorted()
             .toList();
 
         final var uniqueMetaData = ProjectNodeMetadata.builder()

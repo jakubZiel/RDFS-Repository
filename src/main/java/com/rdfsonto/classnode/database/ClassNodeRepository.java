@@ -69,16 +69,18 @@ public interface ClassNodeRepository extends Neo4jRepository<ClassNodeVo, Long>
     @Query("""
         CALL db.relationshipTypes()
         YIELD relationshipType
+        WHERE relationshipType CONTAINS $projectTag
         RETURN relationshipType
         """)
-    List<String> findAllRelationshipTypes(String projectTag);
+    List<String> findAllRelationshipTypes(@Param("projectTag") String projectTag);
 
     @Query("""
         CALL db.labels()
         YIELD label
+        WHERE label CONTAINS $projectTag
         RETURN label
          """)
-    List<String> findAllLabels(String projectTag);
+    List<String> findAllLabels(@Param("projectTag") String projectTag);
 
     // TODO needs to be cached
     /*
@@ -94,6 +96,15 @@ public interface ClassNodeRepository extends Neo4jRepository<ClassNodeVo, Long>
         return DISTINCT(keys) as key
         """)
     List<String> findAllPropertyKeys(@Param("label") String label);
+
+    @Query("""
+        CALL db.propertyKeys() YIELD propertyKey
+        WHERE propertyKey CONTAINS $label
+        RETURN propertyKey
+        UNION
+        RETURN "uri" AS propertyKey
+        """)
+    List<String> findAllPropertyKeysFast(@Param("label") String label);
 
     @Query("""
         MATCH (n:Resource)

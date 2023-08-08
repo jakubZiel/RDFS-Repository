@@ -12,7 +12,11 @@ public interface ClassNodeService
 
     List<ClassNode> findByIdsLight(long projectId, List<Long> ids);
 
-    List<ClassNode> findByPropertiesAndLabels(long projectId, List<String> labels, List<FilterCondition> filters, final Pageable pageable);
+    List<ClassNode> findByPropertiesAndLabels(long projectId,
+                                              List<String> labels,
+                                              List<FilterCondition> filters,
+                                              final List<PatternFilter> patterns,
+                                              final Pageable pageable);
 
     List<ClassNode> findByProject(final long projectId, final Pageable page);
 

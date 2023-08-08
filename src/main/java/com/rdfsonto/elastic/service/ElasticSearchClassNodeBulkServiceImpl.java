@@ -38,7 +38,7 @@ public class ElasticSearchClassNodeBulkServiceImpl implements ElasticSearchClass
     @Override
     public void createIndex(final long userId, final long projectId)
     {
-        final var projectTag = uniqueUriIdHandler.uniqueUri(userId, projectId);
+        final var projectTag = uniqueUriIdHandler.uniquerUriTag(userId, projectId);
         final var projectLabel = List.of(uriUniquenessHandler.getClassNodeLabel(projectTag));
 
         final var nodeCount = classNodeNeo4jDriverRepository.countNodeIdsByPropertiesAndLabels(projectLabel, List.of());

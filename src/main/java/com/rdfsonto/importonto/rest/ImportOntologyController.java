@@ -1,7 +1,15 @@
 package com.rdfsonto.importonto.rest;
 
+import static java.util.concurrent.TimeUnit.SECONDS;
+
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeoutException;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -42,6 +50,44 @@ public class ImportOntologyController
                 importOntologyRequest.userId(),
                 importOntologyRequest.projectId()));
     }
+
+    //TODO timeout when download takes too long
+    @GetMapping("test-timeout")
+    public void testTimeout() throws InterruptedException, ExecutionException
+    {
+        ExecutorService executorService = Executors.newSingleThreadExecutor();
+        final var fut = executorService.submit(new Runnable()
+        {
+            @Override
+            public void run()
+            {
+                try
+                {
+                    System.err.println(System.currentTimeMillis());
+                    Thread.sleep(2000);
+                    System.err.println(System.currentTimeMillis());
+                }
+                catch (InterruptedException e)
+                {
+                    throw new RuntimeException(e);
+                }
+            }
+        });
+
+        try
+        {
+            fut.get(3, SECONDS);
+            System.out.println("holded for 3s");
+        }
+        catch (TimeoutException e)
+        {
+            System.err.println("interrupeted");
+            System.err.println(System.currentTimeMillis());
+            fut.cancel(true);
+        }
+    }
+
+
 
     @ExceptionHandler(ImportOntologyException.class)
     public ResponseEntity<?> handle(final ImportOntologyException importOntologyException)

@@ -105,6 +105,6 @@ public class ProjectServiceImpl implements ProjectService
 
         final var user = userNode.orElseThrow(() -> new IllegalStateException("Can't get a tag for a non-existing user, id: %s".formatted(ownerId)));
 
-        return uniqueUriIdHandler.uniqueUri(user.getId(), project.getId());
+        return uniqueUriIdHandler.uniquerUriTag(user.getId(), project.getId());
     }
 }

@@ -26,7 +26,8 @@ public class UriUniquenessHandler
         final var uniqueUri = applyUniqueness(nonUniqueUri, projectTag, true);
 
         final var uniqueLabelsStream = Stream.of("Resource", getClassNodeLabel(projectTag));
-        final var labelsStream = nonUniqueUriClassNode.classLabels().stream();
+        final var labelsStream = nonUniqueUriClassNode.classLabels().stream()
+            .map(label -> applyUniqueness(label, projectTag, true));
 
         final var uniqueLabels = Stream.concat(uniqueLabelsStream, labelsStream).toList();
         final var uniqueProperties = applyUniqueness(nonUniqueUriClassNode.properties(), projectTag);
@@ -53,7 +54,7 @@ public class UriUniquenessHandler
 
     List<String> applyUniqueness(final List<String> nonUniqueUris, final String projectTag)
     {
-        return nonUniqueUris.stream().map(nonUniqueUri -> applyUniqueness(nonUniqueUri, projectTag, false)).toList();
+        return nonUniqueUris.stream().map(nonUniqueUri -> applyUniqueness(nonUniqueUri, projectTag, true)).toList();
     }
 
     List<String> addUniqueLabel(final List<String> labels, final String projectTag)
@@ -65,8 +66,7 @@ public class UriUniquenessHandler
     private Map<String, Object> applyUniqueness(final Map<String, Object> properties, final String projectTag)
     {
         return Optional.ofNullable(properties).map(nonNullProperties -> nonNullProperties.entrySet().stream()
-                // TODO what if property is declared in a file, it should resolve to unique uri
-                .map(property -> Map.entry(applyUniqueness(property.getKey(), projectTag, false), property.getValue()))
+                .map(property -> Map.entry(applyUniqueness(property.getKey(), projectTag, true), property.getValue()))
                 .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)))
             .orElse(null);
     }
@@ -81,18 +81,6 @@ public class UriUniquenessHandler
 
     public String applyUniqueness(final String nonUniqueUri, final String projectTag, final boolean apply)
     {
-        final var prefixToUri = Map.of(
-            "dc", "http://purl.org/dc/elements/1.1/",
-            "obo", "http://purl.obolibrary.org/obo/",
-            "owl", "http://www.w3.org/2002/07/owl#",
-            "rdf", "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
-            "doid", "http://purl.obolibrary.org/obo/doid#",
-            "rdfs", "http://www.w3.org/2000/01/rdf-schema#",
-            "skos", "http://www.w3.org/2004/02/skos/core#",
-            "terms", "http://purl.org/dc/terms/",
-            "oboInOwl", "http://www.geneontology.org/formats/oboInOwl#"
-        );
-
         if (!UrlValidator.getInstance().isValid(nonUniqueUri))
         {
             return nonUniqueUri;
@@ -110,5 +98,7 @@ public class UriUniquenessHandler
     {
         return USER_NAMESPACE_LABEL_PREFIX + "#" + projectTag;
     }
+
+
 }
 

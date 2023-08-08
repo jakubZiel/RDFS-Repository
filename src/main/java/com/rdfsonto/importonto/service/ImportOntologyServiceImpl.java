@@ -42,7 +42,7 @@ import lombok.extern.slf4j.Slf4j;
 class ImportOntologyServiceImpl implements ImportOntologyService
 {
     private static final String WORKSPACE_DIR = System.getProperty("user.dir") + "/workspace/";
-    private static final long MAX_ONTOLOGY_FILE_SIZE_BYTES = 40_000_000;
+    private static final long MAX_ONTOLOGY_FILE_SIZE_BYTES = 10_000_000;
 
     private final UserService userService;
     private final ImportOntologyRepository importOntologyRepository;
@@ -95,7 +95,7 @@ class ImportOntologyServiceImpl implements ImportOntologyService
 
         try
         {
-            if (fileSize > MAX_ONTOLOGY_FILE_SIZE_BYTES)
+            if (true)
             {
                 final var rdf4jStreamDownloader = new RDFStreamImporter();
 

@@ -32,6 +32,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class RDFImporter extends RDFInputOutput
 {
+    // TODO add referenced resource handling to rdf stream import
     private static final String REFERENCED_RESOURCE = "http://user_neo4j/referencedResource";
 
     public void prepareRDFFileToMergeIntoNeo4j(final URL inputURL, final Path outputFile, final String tag, final RDFFormat rdfFormat)

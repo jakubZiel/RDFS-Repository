@@ -67,12 +67,16 @@ public class ClassNodeNeo4jDriverRepositoryTemplates
         MATCH (n:Resource:`%s`)<-[r:`%s`]-()
         """;
 
-    static final String WITH_NODE = """
-        WITH n
-        """;
-
     static final String PATTERN_MATCHING_OUTGOING_LINK = """
         MATCH (n:Resource:`%s`)-[r:`%s`]->()
+        """;
+
+    static final String PATTERN_MATCHING_ANY_LINK = """
+        MATCH (n:Resource:`%s`)-[r:`%s`]-()
+        """;
+
+    static final String WITH_NODE = """
+        WITH n
         """;
 
     static final String FILTER_BY_NODE_IDS = """

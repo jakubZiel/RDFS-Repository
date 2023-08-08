@@ -83,12 +83,13 @@ public class UriRemoveUniquenessHandler
             .map(uri -> uri + "#")
             .orElseThrow(() -> new IllegalStateException("Invalid uri %s.".formatted(uniqueUri)));
 
-        return KnownNamespace.isKnownNamespace(namespaceUrl) ? propertiesEntry :
-            Map.entry(removeUniqueness(propertiesEntry.getKey()), propertiesEntry.getValue());
+        return Map.entry(removeUniqueness(propertiesEntry.getKey()), propertiesEntry.getValue());
     }
 
     public String removeUniqueness(final String uniqueUri)
     {
         return uniqueUriIdHandler.removeUniqueness(uniqueUri);
     }
+
+
 }

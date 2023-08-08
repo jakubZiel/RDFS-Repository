@@ -7,7 +7,7 @@ import lombok.Data;
 
 
 @Data
-@Builder(setterPrefix = "with")
+@Builder(setterPrefix = "with", toBuilder = true)
 public class PatternFilter
 {
     final String relationshipName;

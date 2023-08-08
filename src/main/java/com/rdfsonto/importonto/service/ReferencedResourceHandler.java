@@ -27,17 +27,18 @@ public class ReferencedResourceHandler
 
     List<ClassNode> findAndLabelReferencedResources(final Long projectId)
     {
-        final var projectLabel = projectService.findById(projectId)
+        final var projectTag = projectService.findById(projectId)
             .map(projectService::getProjectTag)
-            .map(uriUniquenessHandler::getClassNodeLabel)
             .orElseThrow(() -> new IllegalStateException("Could not find a project."));
 
-        final var referencedResourceIds = classNodeRepository.findAllDetachedReferencedResources(projectLabel).stream()
+        final var referencedResourceIds = classNodeRepository.findAllDetachedReferencedResources(projectTag).stream()
             .map(ClassNodeProjection::getId)
             .toList();
 
+        final var projectLabel = uriUniquenessHandler.getClassNodeLabel(projectTag);
+
         classNodeNeo4jDriverRepository.batchAddLabel(referencedResourceIds, projectLabel);
 
-        return classNodeService.findByIds(projectId, referencedResourceIds);
+        return classNodeService.findByIdsLight(projectId, referencedResourceIds);
     }
 }

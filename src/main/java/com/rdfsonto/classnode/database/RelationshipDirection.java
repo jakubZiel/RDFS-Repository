@@ -2,5 +2,5 @@ package com.rdfsonto.classnode.database;
 
 public enum RelationshipDirection
 {
-    INCOMING, OUTGOING
+    INCOMING, OUTGOING, ANY
 }
