@@ -1,0 +1,80 @@
+@prefix auto: <http://localhost/ontologies/2019/1/10/automobile#> .
+@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix xml: <http://www.w3.org/XML/1998/namespace> .
+@prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl: <http://www.w3.org/2002/07/owl#> .
+
+auto:hasEngine a owl:ObjectProperty;
+  rdfs:domain auto:Automobile;
+  rdfs:range auto:Engine .
+
+auto:Atlas a owl:Class;
+  rdfs:subClassOf auto:SUV;
+  rdfs:label "Atlas" .
+
+auto:Automobile a owl:Class;
+  rdfs:label "Automobile" .
+
+auto:Beetle a owl:Class;
+  rdfs:subClassOf auto:Compact;
+  rdfs:label "Beetle" .
+
+auto:Beetle_Convertible a owl:Class;
+  rdfs:subClassOf auto:Convertible;
+  rdfs:label "Beetle Convertible" .
+
+auto:Compact a owl:Class;
+  rdfs:subClassOf auto:Volkswagen;
+  rdfs:label "Compact" .
+
+auto:Components a owl:Class;
+  rdfs:label "Component" .
+
+auto:Convertible a owl:Class;
+  rdfs:subClassOf auto:Volkswagen .
+
+auto:Electric a owl:Class;
+  rdfs:subClassOf auto:Engine;
+  rdfs:label "Electric" .
+
+auto:Engine a owl:Class;
+  rdfs:subClassOf auto:Components;
+  rdfs:label "Engine" .
+
+auto:Golf_Alltrack a owl:Class;
+  rdfs:subClassOf auto:Wagon;
+  rdfs:label "Golf Alltrack" .
+
+auto:Golf_R a owl:Class;
+  rdfs:subClassOf auto:Compact;
+  rdfs:label "Golf R" .
+
+auto:Golf_Sportwagen a owl:Class;
+  rdfs:subClassOf auto:Wagon;
+  rdfs:label "Golf Sportwagen" .
+
+auto:Jetta a owl:Class;
+  rdfs:subClassOf auto:Sedan;
+  rdfs:label "Jetta" .
+
+auto:Passat a owl:Class;
+  rdfs:subClassOf auto:Sedan;
+  rdfs:label "Passat" .
+
+auto:SUV a owl:Class;
+  rdfs:subClassOf auto:Volkswagen .
+
+auto:Sedan a owl:Class;
+  rdfs:subClassOf auto:Volkswagen .
+
+auto:Tiguan a owl:Class;
+  rdfs:subClassOf auto:SUV;
+  rdfs:label "Tiguan" .
+
+auto:Volkswagen a owl:Class;
+  rdfs:subClassOf auto:Automobile;
+  rdfs:label "Volkswagen" .
+
+auto:Wagon a owl:Class;
+  rdfs:subClassOf auto:Volkswagen .
