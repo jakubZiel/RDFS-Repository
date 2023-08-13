@@ -7,6 +7,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeoutException;
 
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.rdfsonto.importonto.service.ImportOntologyErrorCode;
 import com.rdfsonto.importonto.service.ImportOntologyException;
@@ -37,7 +39,7 @@ public class ImportOntologyController
     {
         final var rdfFormat = RdfFormatParser.parse(importOntologyRequest.rdfFormat());
 
-        if (isNotValid(importOntologyRequest))
+        if (isNotValidUrl(importOntologyRequest))
         {
             log.warn("Invalid import ontology request: {}", importOntologyRequest);
             return ResponseEntity.badRequest().body(ImportOntologyErrorCode.INVALID_REQUEST);
@@ -49,6 +51,26 @@ public class ImportOntologyController
                 rdfFormat,
                 importOntologyRequest.userId(),
                 importOntologyRequest.projectId()));
+    }
+    @PostMapping(value = "/file", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<?> importOntologyFile(final ImportOntologyRequest importOntologyRequest, final RedirectAttributes redirectAttributes)
+    {
+        final var rdfFormat = RdfFormatParser.parse(importOntologyRequest.rdfFormat());
+        redirectAttributes.addFlashAttribute("message", "Successfully uploaded file");
+
+        if (isNotValidFile(importOntologyRequest))
+        {
+            log.warn("Invalid import ontology request: {}", importOntologyRequest);
+            return ResponseEntity.badRequest().body(ImportOntologyErrorCode.INVALID_REQUEST);
+        }
+
+        importOntologyService.importOntology(
+            importOntologyRequest.file(),
+            rdfFormat,
+            importOntologyRequest.userId(),
+            importOntologyRequest.projectId());
+
+        return ResponseEntity.ok().build();
     }
 
     //TODO timeout when download takes too long
@@ -88,7 +110,6 @@ public class ImportOntologyController
     }
 
 
-
     @ExceptionHandler(ImportOntologyException.class)
     public ResponseEntity<?> handle(final ImportOntologyException importOntologyException)
     {
@@ -96,11 +117,20 @@ public class ImportOntologyController
         return ResponseEntity.badRequest().body(importOntologyException.getErrorCode());
     }
 
-    private boolean isNotValid(final ImportOntologyRequest request)
+    private boolean isNotValidUrl(final ImportOntologyRequest request)
     {
         return request.projectId() == null ||
             request.userId() == null ||
             request.source() == null ||
             request.rdfFormat() == null;
     }
+
+    private boolean isNotValidFile(final ImportOntologyRequest request)
+    {
+        return request.projectId() == null ||
+            request.userId() == null ||
+            request.file() == null || request.file().isEmpty() ||
+            request.rdfFormat() == null;
+    }
+
 }

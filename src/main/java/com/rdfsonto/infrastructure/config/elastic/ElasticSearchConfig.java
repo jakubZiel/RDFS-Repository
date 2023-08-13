@@ -38,10 +38,10 @@ public class ElasticSearchConfig
         final var credentialProvider = new BasicCredentialsProvider();
         credentialProvider.setCredentials(AuthScope.ANY, new UsernamePasswordCredentials(login, password));
 
-        return RestClient.builder(new HttpHost(host, port, "https"))
-            .setHttpClientConfigCallback(hc -> hc
+        return RestClient.builder(new HttpHost(host, port, "http"))
+/*            .setHttpClientConfigCallback(hc -> hc
                 .setSSLContext(sslContext)
-                .setDefaultCredentialsProvider(credentialProvider))
+                .setDefaultCredentialsProvider(credentialProvider))*/
             .build();
     }
 

@@ -54,7 +54,7 @@ public class AuthController
         }
 
         final var savedKeycloakUser = authService.save(keycloakUserRequest);
-        final var savedUser = userService.save(mapToNode(savedKeycloakUser));
+        final var savedUser = userService. save(mapToNode(savedKeycloakUser));
 
         return ResponseEntity.ok(savedUser);
     }

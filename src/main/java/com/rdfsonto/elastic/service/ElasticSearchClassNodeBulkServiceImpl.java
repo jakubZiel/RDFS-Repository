@@ -53,7 +53,6 @@ public class ElasticSearchClassNodeBulkServiceImpl implements ElasticSearchClass
 
         elasticsearchAsyncClient.indices()
             .refresh(refresh -> refresh.index(ElasticSearchClassNodeServiceImpl.getIndexName(userId, projectId)));
-
         bulkIngester.close();
     }
 

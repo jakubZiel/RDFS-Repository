@@ -4,6 +4,7 @@ import static com.rdfsonto.importonto.service.ImportOntologyErrorCode.FAILED_ONT
 import static com.rdfsonto.importonto.service.ImportOntologyErrorCode.INVALID_ONTOLOGY_URL;
 import static com.rdfsonto.importonto.service.ImportOntologyErrorCode.INVALID_PROJECT_ID;
 import static com.rdfsonto.importonto.service.ImportOntologyErrorCode.INVALID_RDF_FORMAT;
+import static com.rdfsonto.importonto.service.ImportOntologyErrorCode.INVALID_REQUEST;
 import static com.rdfsonto.importonto.service.ImportOntologyErrorCode.INVALID_USER_ID;
 
 import java.io.IOException;
@@ -20,6 +21,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.client.WebClient;
 
 import com.rdfsonto.classnode.service.UniqueUriIdHandler;
@@ -82,8 +84,58 @@ class ImportOntologyServiceImpl implements ImportOntologyService
 
         log.info("Started indexing ontology from URL : {}", source);
         elasticSearchClassNodeBulkService.createIndex(userId, projectId);
-
+        log.info("Imported into Elasticsearch.");
         return importResult;
+    }
+
+    @Override
+    public ImportOntologyResult importOntology(final MultipartFile file, final RDFFormat rdfFormat, final Long userId, final Long projectId)
+    {
+        userService.findById(userId)
+            .orElseThrow(() -> new ImportOntologyException("User with ID: %s does not exist.".formatted(userId), INVALID_USER_ID));
+
+        final var validRdfFormat = Optional.ofNullable(rdfFormat)
+            .orElseThrow(() -> new ImportOntologyException("Invalid RDF format", INVALID_RDF_FORMAT));
+
+        final var project = projectService.findById(projectId)
+            .orElseThrow(() -> new ImportOntologyException("Project with ID: %s does not exist.".formatted(projectId), INVALID_PROJECT_ID));
+
+        if (file.isEmpty())
+        {
+            throw new ImportOntologyException("Failed to upload file with data.", INVALID_REQUEST);
+        }
+
+        log.info("Started importing ontology from file : {}", file.getName());
+        final var ontologyTag = projectService.getProjectTag(project);
+        try
+        {
+            final var rdf4jStreamDownloader = new RDFStreamImporter();
+            final var output = rdf4jStreamDownloader.getProcessedRdfFileForNeo4j(file, WORKSPACE_DIR, ontologyTag, validRdfFormat);
+
+            final var downloadedOntology = DownloadedOntology.builder()
+                .withPath(output)
+                .withRdfFormat(validRdfFormat)
+                .build();
+
+            log.info("Started importing ontology from file : {}", file.getName());
+            final var importResult = importOntology(downloadedOntology);
+            referencedResourceHandler.findAndLabelReferencedResources(projectId);
+
+            if (!importResult.getTerminationStatus().equals("OK") || importResult.getTriplesLoaded() <= 0)
+            {
+                throw new ImportOntologyException("Failed to import ontology.", FAILED_ONTOLOGY_IMPORT);
+            }
+
+            log.info("Started indexing ontology from file : {}", file.getName());
+            elasticSearchClassNodeBulkService.createIndex(userId, projectId);
+            log.info("Imported file into Elasticsearch");
+            return importResult;
+        }
+        catch (Exception e)
+        {
+            e.printStackTrace();
+            throw new IllegalStateException("Failed to upload file.");
+        }
     }
 
     public DownloadedOntology downloadOntology(final URL source,

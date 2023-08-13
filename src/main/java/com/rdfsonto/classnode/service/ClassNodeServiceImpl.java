@@ -112,7 +112,7 @@ public class ClassNodeServiceImpl implements ClassNodeService
             .map(ElasticSearchClassNode::id)
             .toList();
 
-        final var uniquePatterns = patterns.stream()
+        final var uniquePatterns = patterns == null ? List.of() : patterns.stream()
             .map(pattern -> pattern.toBuilder()
                 .withRelationshipName(uriHandler.applyUniqueness(pattern.getRelationshipName(), projectTag, true))
                 .build());

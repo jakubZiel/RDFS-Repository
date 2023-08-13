@@ -1,5 +1,7 @@
 package com.rdfsonto.importonto.service;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -10,10 +12,10 @@ import java.nio.channels.Channels;
 import java.nio.file.Path;
 import java.util.zip.GZIPInputStream;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.Rio;
+import org.springframework.web.multipart.MultipartFile;
 
 
 public class RDFStreamImporter
@@ -32,6 +34,28 @@ public class RDFStreamImporter
         final var inputStream = handleInputStream(downloadedInputStream, inputURL);
 
         final var outputStream = new FileOutputStream(processedOntologyFile.toFile(), true);
+        final var importHandler = new RDFStreamImportHandler(outputStream, rdfFormat, tag);
+
+        final var parser = Rio.createParser(rdfFormat);
+        parser.setRDFHandler(importHandler);
+
+        importHandler.start();
+        parser.parse(inputStream);
+        importHandler.stop();
+
+        return processedOntologyFile;
+    }
+
+    public Path getProcessedRdfFileForNeo4j(final MultipartFile originalOntologyFile,
+                                            final String workspaceDirectory,
+                                            final String tag,
+                                            final RDFFormat rdfFormat)
+        throws IOException
+    {
+        final var processedOntologyFile = Path.of(workspaceDirectory + tag + ".output");
+
+        final var outputStream = new BufferedOutputStream(new FileOutputStream(processedOntologyFile.toFile(), true));
+        final var inputStream = new BufferedInputStream(originalOntologyFile.getInputStream());
         final var importHandler = new RDFStreamImportHandler(outputStream, rdfFormat, tag);
 
         final var parser = Rio.createParser(rdfFormat);
