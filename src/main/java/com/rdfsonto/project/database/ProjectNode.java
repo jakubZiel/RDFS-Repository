@@ -28,7 +28,9 @@ public class ProjectNode
 
     private Long ownerId;
 
+    @Property("time")
     private Long snapshotTime;
+    @Property("file")
     private String snapshotFile;
 
     @Property("name")

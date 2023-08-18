@@ -5,8 +5,13 @@ import static com.rdfsonto.classnode.service.ClassNodeExceptionErrorCode.INVALID
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 
 import javax.servlet.http.HttpServletResponse;
 
@@ -43,7 +48,6 @@ import lombok.extern.slf4j.Slf4j;
 public class ExportOntologyController
 {
     private final ExportOntologyService exportOntologyService;
-    private final WorkspaceManagementService workspaceManagementService;
 
     @PostMapping
     public ResponseEntity<?> exportRdfResource(@RequestBody final ExportOntologyRequest exportOntologyRequest, final HttpServletResponse response)
@@ -80,25 +84,55 @@ public class ExportOntologyController
         }
     }
 
-    @GetMapping(value = "/get-file/{file}")
-    public void getFile(@PathVariable final String file, final HttpServletResponse response) throws IOException
+    @GetMapping(value = "/file/{userId}/{projectId}")
+    public void getFile(@PathVariable final Long projectId, @PathVariable final Long userId, final HttpServletResponse response) throws IOException
     {
+        // TODO add rights validation
 
-        final var result = new BufferedInputStream(new FileInputStream(
-            "/home/jzielins/Projects/ontology-editor-backend/workspace/" + file));
+        final var snapshot = exportOntologyService.provideExportedSnapshot(userId, projectId);
+        final var inputStream = snapshot.fileInputStream();
 
         response.setContentType("application/octet-stream");
-        response.setHeader("Content-disposition", "attachment; filename=" + file);
+        response.setHeader("Content-disposition", "attachment; filename=" + snapshot.fileName() + ".gz");
 
         final var out = response.getOutputStream();
 
-        IOUtils.copy(result, out);
+        IOUtils.copy(inputStream, out);
         out.close();
-        result.close();
+        inputStream.close();
 
         /*final var responseHeaders = new HttpHeaders();
         responseHeaders.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"%s\"".formatted(file));
         return new ResponseEntity<>(IOUtils.toByteArray(result), responseHeaders, HttpStatus.OK);*/
+    }
+
+    @GetMapping("/curl/cheat")
+    public void fetchFileCurl() throws IOException, InterruptedException
+    {
+        final var x = """
+                {
+                    "cypher" : "MATCH (n:Resource) WHERE NOT (n)-[]->() return n , null as r UNION MATCH (n:Resource)-[r]->() return n,r",
+                    "format" : "N-Triples"
+                }
+            """;
+
+        final var req = HttpRequest.newBuilder()
+            .uri(URI.create("http://localhost:7474/rdf/neo4j/cypher"))
+            .setHeader("Authorization", "Basic bmVvNGo6a3ViYTEyMw==")
+            .POST(HttpRequest.BodyPublishers.ofString(x))
+            .build();
+
+        final var start = System.currentTimeMillis();
+        final var res = HttpClient.newHttpClient()
+            .send(req, HttpResponse.BodyHandlers.ofInputStream());
+
+        FileOutputStream fos = new FileOutputStream("/home/jzielins/Projects/ontology-editor-backend/workspace/final.ttl");
+        fos.write(res.body().readAllBytes());
+        fos.close();
+
+        final var end = System.currentTimeMillis();
+
+        System.err.println(end - start);
     }
 
     @ExceptionHandler(ClassNodeException.class)

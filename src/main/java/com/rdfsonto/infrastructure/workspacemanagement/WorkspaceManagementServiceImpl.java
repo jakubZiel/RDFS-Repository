@@ -5,6 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.UUID;
 
+import org.apache.commons.io.FilenameUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -29,6 +30,24 @@ public class WorkspaceManagementServiceImpl implements WorkspaceManagementServic
         catch (IOException e)
         {
             log.error("Failed to delete files for export ID: {}", exportId);
+        }
+    }
+
+    public void clearWorkspace(final String fileName)
+    {
+        final var baseName = FilenameUtils.getBaseName(fileName);
+        if (baseName == null)
+        {
+            return;
+        }
+        try (final var filePaths = Files.list(Path.of(WORKSPACE_DIR)))
+        {
+            filePaths.filter(path -> path.getFileName().toString().startsWith(baseName))
+                .forEach(this::deleteFile);
+        }
+        catch (IOException e)
+        {
+            log.error("Failed to delete files for export: {}", fileName);
         }
     }
 

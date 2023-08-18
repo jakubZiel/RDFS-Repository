@@ -6,4 +6,6 @@ import org.eclipse.rdf4j.rio.RDFFormat;
 public interface ExportOntologyService
 {
     ExportOntologyResult exportOntology(long userId, long projectId, RDFFormat rdfFormat);
+
+    SnapshotExport provideExportedSnapshot(long userId, long projectId);
 }

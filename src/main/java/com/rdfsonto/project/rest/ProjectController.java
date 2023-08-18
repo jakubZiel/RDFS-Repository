@@ -51,8 +51,8 @@ public class ProjectController
             log.info("User name: {} does not exist. Can not get all projects", username);
             return ResponseEntity.notFound().build();
         }
-
-        return ResponseEntity.ok(projectService.findProjectNodesByUsername(username));
+        final var projects = projectService.findProjectNodesByUsername(username);
+        return ResponseEntity.ok(projects);
     }
 
     @GetMapping

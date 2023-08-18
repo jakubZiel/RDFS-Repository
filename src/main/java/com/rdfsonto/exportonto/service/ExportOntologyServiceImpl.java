@@ -7,9 +7,12 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -34,6 +37,7 @@ import com.rdfsonto.classnode.service.UniqueUriIdHandler;
 import com.rdfsonto.classnode.service.UriRemoveUniquenessHandler;
 import com.rdfsonto.classnode.service.UriUniquenessHandler;
 import com.rdfsonto.exportonto.database.ExportRepository;
+import com.rdfsonto.infrastructure.workspacemanagement.WorkspaceManagementService;
 import com.rdfsonto.prefix.service.PrefixNodeService;
 import com.rdfsonto.project.database.ProjectRepository;
 import com.rdfsonto.project.service.ProjectService;
@@ -68,10 +72,13 @@ class ExportOntologyServiceImpl implements ExportOntologyService
     private final UriUniquenessHandler uriUniquenessHandler;
     private final UriRemoveUniquenessHandler uriRemoveUniquenessHandler;
     private final ProjectRepository projectRepository;
+    private final WorkspaceManagementService workspaceManagementService;
 
+
+    @Override
     public ExportOntologyResult exportOntology(final long userId, final long projectId, final RDFFormat rdfFormat)
     {
-        projectService.findById(projectId)
+        final var project = projectService.findById(projectId)
             .orElseThrow(() -> new ClassNodeException(
                 "Project with ID: %s does not exist, could not export.".formatted(projectId),
                 INVALID_PROJECT_ID));
@@ -91,12 +98,51 @@ class ExportOntologyServiceImpl implements ExportOntologyService
 
             projectRepository.saveSnapshot(projectId, snapshotTime, snapshotName);
 
+            final var oldSnapshotFile = project.getSnapshotFile();
+            workspaceManagementService.clearWorkspace(oldSnapshotFile);
+
             return exportedOntology;
         }
         catch (final IOException exception)
         {
             log.error(exception.getMessage());
             throw new IllegalStateException("Failed to extract ontology to a file.");
+        }
+    }
+
+    @Override
+    public SnapshotExport provideExportedSnapshot(final long userId, final long projectId)
+    {
+        final var project = projectService.findById(projectId)
+            .orElseThrow(() -> new ClassNodeException(
+                "Project with ID: %s does not exist, could not export.".formatted(projectId),
+                INVALID_PROJECT_ID));
+
+        userService.findById(userId)
+            .orElseThrow(() -> new ClassNodeException(
+                "Attempted ontology export for non-existing user ID: $%s.".formatted(userId),
+                INVALID_USER_ID));
+
+        final var snapshotPath = project.getSnapshotFile() != null ? Path.of(WORKSPACE_DIR + project.getSnapshotFile()) : null;
+
+        if (snapshotPath == null || !Files.exists(snapshotPath))
+        {
+            return SnapshotExport.builder()
+                .withFileInputStream(InputStream.nullInputStream())
+                .build();
+        }
+
+        try
+        {
+            return SnapshotExport.builder()
+                .withSnapshotTime(project.getSnapshotTime())
+                .withFileName(project.getProjectName())
+                .withFileInputStream(new BufferedInputStream(new FileInputStream(snapshotPath.toFile())))
+                .build();
+        }
+        catch (FileNotFoundException e)
+        {
+            throw new IllegalStateException("Failed to open input stream to file %s".formatted(snapshotPath));
         }
     }
 
