@@ -123,7 +123,7 @@ class ImportOntologyServiceImpl implements ImportOntologyService
 
             if (!importResult.getTerminationStatus().equals("OK") || importResult.getTriplesLoaded() <= 0)
             {
-                throw new ImportOntologyException("Failed to import ontology.", FAILED_ONTOLOGY_IMPORT);
+                throw new ImportOntologyException("Failed to import ontology: %s.".formatted(importResult), FAILED_ONTOLOGY_IMPORT);
             }
 
             log.info("Started indexing ontology from file : {}", file.getName());
