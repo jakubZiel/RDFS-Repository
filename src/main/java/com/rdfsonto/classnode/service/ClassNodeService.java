@@ -5,6 +5,8 @@ import java.util.Optional;
 
 import org.springframework.data.domain.Pageable;
 
+import com.rdfsonto.elastic.service.SearchAfterParams;
+
 
 public interface ClassNodeService
 {
@@ -12,11 +14,12 @@ public interface ClassNodeService
 
     List<ClassNode> findByIdsLight(long projectId, List<Long> ids);
 
-    List<ClassNode> findByPropertiesAndLabels(long projectId,
+    NodeSearchResult findByPropertiesAndLabels(long projectId,
                                               List<String> labels,
                                               List<FilterCondition> filters,
                                               final List<PatternFilter> patterns,
-                                              final Pageable pageable);
+                                              final Pageable pageable,
+                                              final SearchAfterParams searchAfterParams);
 
     List<ClassNode> findByProject(final long projectId, final Pageable page);
 

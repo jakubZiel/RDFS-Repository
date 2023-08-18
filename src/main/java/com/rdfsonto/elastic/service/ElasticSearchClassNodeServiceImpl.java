@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -15,6 +16,11 @@ import com.rdfsonto.classnode.service.ClassNode;
 import com.rdfsonto.classnode.service.FilterCondition;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
+import co.elastic.clients.elasticsearch._types.FieldSort;
+import co.elastic.clients.elasticsearch._types.FieldValue;
+import co.elastic.clients.elasticsearch._types.ScoreSort;
+import co.elastic.clients.elasticsearch._types.SortOptions;
+import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch._types.query_dsl.BoolQuery;
 import co.elastic.clients.elasticsearch._types.query_dsl.Query;
 import lombok.RequiredArgsConstructor;
@@ -32,6 +38,14 @@ public class ElasticSearchClassNodeServiceImpl implements ElasticSearchClassNode
     static final String NEO4J_ID_FIELD = "neo4j_id";
     private static final String NEO4J_LABELS_FIELD = "neo4j_labels";
     private static final String INDEX_PREFIX_TEMPLATE = "ontology-index-%s-%s";
+    private final List<FieldValue> EMPTY_SEARCH_AFTER_VALUES = List.of(
+        FieldValue.of("Infinity"),
+        FieldValue.of(""));
+    private static final SortOptions SORT_BY_SCORE_OPTION = SortOptions.of(sortOption ->
+        sortOption.score(ScoreSort.of(scoreSort -> scoreSort.order(SortOrder.Desc))));
+    private static final SortOptions SORT_BY_URI_OPTION = SortOptions.of(sortOption ->
+        sortOption.field(FieldSort.of(fieldSort -> fieldSort.field(NEO4J_URI_FIELD + ".keyword").order(SortOrder.Asc))));
+
     private final ElasticsearchClient elasticsearchClient;
     private final ElasticSearchClassNodeMapper mapper;
 
@@ -40,7 +54,8 @@ public class ElasticSearchClassNodeServiceImpl implements ElasticSearchClassNode
                                                final long projectId,
                                                final List<FilterCondition> filters,
                                                final List<String> labels,
-                                               final Pageable pageable)
+                                               final Pageable pageable,
+                                               final SearchAfterParams lastResult)
     {
         final var propertyQuery = filters.stream()
             .map(this::filterConditionToQuery)
@@ -57,13 +72,18 @@ public class ElasticSearchClassNodeServiceImpl implements ElasticSearchClassNode
             .map(query -> new BoolQuery.Builder().must(query).build()._toQuery())
             .toList();
 
+        final var searchAfterParams = Optional.ofNullable(lastResult)
+            .map(lastSearchAfter -> List.of(FieldValue.of(lastSearchAfter.accuracyScore()), FieldValue.of(lastSearchAfter.uri())))
+            .orElse(EMPTY_SEARCH_AFTER_VALUES);
+
         final var boolQuery = new BoolQuery.Builder().must(queries);
         try
         {
             final var hits = elasticsearchClient.search(search -> search
-                    .from((int) pageable.getOffset())
                     .size(pageable.getPageSize())
+                    .sort(List.of(SORT_BY_SCORE_OPTION, SORT_BY_URI_OPTION))
                     .index(getIndexName(userId, projectId))
+                    .searchAfter(searchAfterParams)
                     .query(q -> q.bool(b -> boolQuery)), Map.class)
                 .hits().hits();
 

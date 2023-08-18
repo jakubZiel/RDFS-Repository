@@ -109,20 +109,16 @@ public class ClassNodeController
     @PostMapping("/filter")
     ResponseEntity<?> getNodesFiltered(@RequestBody final FilterPropertyRequest request, final Pageable pageable)
     {
-        final var found = classNodeService.findByPropertiesAndLabels(
+        final var result = classNodeService.findByPropertiesAndLabels(
             request.projectId(),
             request.labels(),
             request.filterConditions(),
             request.patterns(),
-            pageable);
-        // TODO validation aspect
-        return ResponseEntity.ok(found);
-    }
+            pageable,
+            request.searchAfter());
 
-    @GetMapping("/traverse/{id}")
-    ResponseEntity<?> getNextNodeTraversals(@PathVariable final long id, @RequestParam final long projectId)
-    {
-        return ResponseEntity.ok().build();
+        // TODO validation aspect
+        return ResponseEntity.ok(result);
     }
 
     @ExceptionHandler(ClassNodeException.class)

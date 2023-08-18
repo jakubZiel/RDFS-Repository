@@ -4,6 +4,7 @@ import static com.rdfsonto.elastic.service.ElasticSearchClassNodeServiceImpl.NEO
 import static com.rdfsonto.elastic.service.ElasticSearchClassNodeServiceImpl.NEO4J_URI_FIELD;
 
 import java.util.Map;
+import java.util.Optional;
 
 import org.springframework.stereotype.Component;
 
@@ -15,6 +16,7 @@ class ElasticSearchClassNodeMapper
 {
     ElasticSearchClassNode map(final Hit<Map> hit)
     {
+
         if (hit.source() == null)
         {
             return null;
@@ -22,7 +24,7 @@ class ElasticSearchClassNodeMapper
 
         final var uri = hit.source().get(NEO4J_URI_FIELD).toString();
         final var id = Long.parseLong(hit.source().get(NEO4J_ID_FIELD).toString());
-
-        return new ElasticSearchClassNode(id, uri);
+        final var score = Optional.ofNullable(hit.score()).orElse(Double.MIN_VALUE);
+        return new ElasticSearchClassNode(id, uri, score);
     }
 }

@@ -23,6 +23,7 @@ import com.rdfsonto.classnode.database.ClassNodeRepository;
 import com.rdfsonto.classnode.database.ClassNodeVo;
 import com.rdfsonto.elastic.service.ElasticSearchClassNode;
 import com.rdfsonto.elastic.service.ElasticSearchClassNodeService;
+import com.rdfsonto.elastic.service.SearchAfterParams;
 import com.rdfsonto.project.service.ProjectService;
 
 import lombok.RequiredArgsConstructor;
@@ -92,11 +93,12 @@ public class ClassNodeServiceImpl implements ClassNodeService
     }
 
     @Override
-    public List<ClassNode> findByPropertiesAndLabels(final long projectId,
-                                                     final List<String> labels,
-                                                     final List<FilterCondition> filters,
-                                                     final List<PatternFilter> patterns,
-                                                     final Pageable pageable)
+    public NodeSearchResult findByPropertiesAndLabels(final long projectId,
+                                                      final List<String> labels,
+                                                      final List<FilterCondition> filters,
+                                                      final List<PatternFilter> patterns,
+                                                      final Pageable pageable,
+                                                      final SearchAfterParams searchAfter)
     {
         final var project = projectService.findById(projectId)
             .orElseThrow(() -> new ClassNodeException(
@@ -108,7 +110,9 @@ public class ClassNodeServiceImpl implements ClassNodeService
         final var projectTag = projectService.getProjectTag(project);
         final var uniqueFilters = nonPrefixedFilters.stream().map(filter -> uriHandler.applyUniqueness(filter, projectTag)).toList();
 
-        final var filteredNodeIds = elasticSearchClassNodeService.search(project.getOwnerId(), projectId, filters, labels, pageable).stream()
+        final var searchedNodes = elasticSearchClassNodeService.search(project.getOwnerId(), projectId, filters, labels, pageable, searchAfter);
+
+        final var filteredNodeIds = searchedNodes.stream()
             .map(ElasticSearchClassNode::id)
             .toList();
 
@@ -118,8 +122,12 @@ public class ClassNodeServiceImpl implements ClassNodeService
                 .build());
 
         final var nodeIds = classNodeNeo4jDriverRepository.findByPattern(patterns, uriHandler.getClassNodeLabel(projectTag), filteredNodeIds);
+        final var nodes = findByIdsLight(projectId, nodeIds);
 
-        return findByIdsLight(projectId, nodeIds);
+        return NodeSearchResult.builder()
+            .withSearchAfter(retrieveSearchAfterParams(searchedNodes))
+            .withNodes(nodes)
+            .build();
     }
 
     @Override
@@ -348,5 +356,19 @@ public class ClassNodeServiceImpl implements ClassNodeService
             (nonPrefixedProperty, filter) -> filter.toBuilder().withProperty(nonPrefixedProperty).build());
 
         return Stream.concat(nonPrefixedUriFilter, nonPrefixedNonUriFilters).toList();
+    }
+
+    private SearchAfterParams retrieveSearchAfterParams(List<ElasticSearchClassNode> searchResult)
+    {
+        if (searchResult.isEmpty()) {
+            return SearchAfterParams.builder().build();
+        }
+
+        final var lastFromPage = searchResult.get(searchResult.size() - 1);
+
+        return SearchAfterParams.builder()
+            .withAccuracyScore(lastFromPage.score())
+            .withUri(lastFromPage.uri())
+            .build();
     }
 }
