@@ -78,13 +78,16 @@ public class ClassNodeNeo4jDriverRepository
     private final ClassNodePropertiesVoMapper classNodePropertiesVoMapper;
     private final RelationshipVoMapper relationshipVoMapper;
 
-    public ClassNodeProjection save(final ClassNode updateNode)
+    public ClassNodePropertiesProjection save(final ClassNode updateNode)
     {
         final var transaction = driver.session().beginTransaction();
         try
         {
-            final var nodeId = classNodeRepository.findProjectionById(updateNode.id())
-                .map(ClassNodeProjection::getId)
+            final var nonNullId = Optional.ofNullable(updateNode.id()).map(List::of).orElse(List.of());
+
+            final var nodeId = classNodeRepository.findAllByIdIn(nonNullId).stream()
+                .findFirst()
+                .map(ClassNodePropertiesProjection::getId)
                 .orElseGet(() -> create(updateNode, transaction).getId());
 
             final Set<RelationshipVo> incomingLinks = findAllIncomingNeighbours(List.of(nodeId), false).stream()
@@ -102,7 +105,8 @@ public class ClassNodeNeo4jDriverRepository
 
             transaction.commit();
 
-            return classNodeRepository.findProjectionById(nodeId)
+            return classNodeRepository.findAllByIdIn(List.of(nodeId)).stream()
+                .findAny()
                 .orElseThrow(() -> new IllegalStateException("Class node with ID: %s is not found after after being saved.".formatted(nodeId)));
         }
         catch (final Exception exception)

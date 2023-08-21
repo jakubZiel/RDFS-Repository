@@ -12,4 +12,12 @@ public class ClassNodeException extends RuntimeException
 {
     private final String message;
     private final ClassNodeExceptionErrorCode errorCode;
+    private final Object value;
+
+    public ClassNodeException(final String message, final ClassNodeExceptionErrorCode errorCode)
+    {
+        this.message = message;
+        this.errorCode = errorCode;
+        this.value = null;
+    }
 }

@@ -5,13 +5,13 @@ import static com.rdfsonto.classnode.service.ClassNodeExceptionErrorCode.INVALID
 import static com.rdfsonto.classnode.service.ClassNodeExceptionErrorCode.INVALID_NODE_URI;
 import static com.rdfsonto.classnode.service.ClassNodeExceptionErrorCode.INVALID_PROJECT_ID;
 import static com.rdfsonto.classnode.service.ClassNodeExceptionErrorCode.INVALID_REQUEST;
+import static com.rdfsonto.classnode.service.ClassNodeExceptionErrorCode.NEIGHBOURHOOD_TOO_BIG;
 
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import org.apache.commons.lang3.NotImplementedException;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,6 +21,7 @@ import com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepository;
 import com.rdfsonto.classnode.database.ClassNodeProjection;
 import com.rdfsonto.classnode.database.ClassNodeRepository;
 import com.rdfsonto.classnode.database.ClassNodeVo;
+import com.rdfsonto.classnode.database.RelationshipDirection;
 import com.rdfsonto.elastic.service.ElasticSearchClassNode;
 import com.rdfsonto.elastic.service.ElasticSearchClassNodeService;
 import com.rdfsonto.elastic.service.SearchAfterParams;
@@ -179,7 +180,8 @@ public class ClassNodeServiceImpl implements ClassNodeService
     public List<ClassNode> findNeighboursByUri(final long projectId,
                                                final String nodeUri,
                                                final int maxDistance,
-                                               final List<String> allowedRelationships)
+                                               final List<String> allowedRelationships,
+                                               final RelationshipDirection relationshipDirection)
     {
         projectService.findById(projectId)
             .orElseThrow(() -> new ClassNodeException(
@@ -193,13 +195,18 @@ public class ClassNodeServiceImpl implements ClassNodeService
 
         final var nonPrefixedRelationships = removePrefixHandler.removePrefix(allowedRelationships, projectId);
 
-        return findNeighbours(projectId, sourceNode.getId(), maxDistance, nonPrefixedRelationships);
+        return findNeighbours(projectId, sourceNode.getId(), maxDistance, nonPrefixedRelationships, relationshipDirection);
     }
 
     @Override
-    public List<ClassNode> findNeighbours(final long projectId, final long nodeId, final int maxDistance, final List<String> allowedRelationships)
+    public List<ClassNode> findNeighbours(final long projectId,
+                                          final long nodeId,
+                                          final int maxDistance,
+                                          final List<String> allowedRelationships,
+                                          final RelationshipDirection relationshipDirection)
     {
-        classNodeRepository.findProjectionById(nodeId)
+        classNodeRepository.findAllByIdIn(List.of(nodeId)).stream()
+            .findAny()
             .orElseThrow(() -> new ClassNodeException("Tried to get neighbours of non existing node with ID: %s".formatted(nodeId), INVALID_NODE_ID));
 
         if (maxDistance < 0)
@@ -207,18 +214,21 @@ public class ClassNodeServiceImpl implements ClassNodeService
             throw new ClassNodeException("Invalid max distance: %d".formatted(maxDistance), INVALID_MAX_DISTANCE);
         }
 
-        final var numberOfNeighbours = classNodeRepository.countAllNeighbours(maxDistance, nodeId);
+        final var numberOfNeighbours = classNodeRepository.countAllNeighbours(maxDistance, nodeId, relationshipDirection.getValue());
 
         if (numberOfNeighbours > MAX_NUMBER_OF_NEIGHBOURS)
         {
-            log.warn("Handling more than {} number of neighbours", numberOfNeighbours);
-            throw new NotImplementedException();
+            throw ClassNodeException.builder()
+                .withErrorCode(NEIGHBOURHOOD_TOO_BIG)
+                .withMessage("Handling more than %s number of neighbours".formatted(numberOfNeighbours))
+                .withValue(numberOfNeighbours)
+                .build();
         }
 
         //TODO apply relationships to findAllNeighbours
         final var nonPrefixedRelationships = removePrefixHandler.removePrefix(allowedRelationships, projectId);
 
-        final var neighbourIds = classNodeRepository.findAllNeighbours(maxDistance, nodeId).stream()
+        final var neighbourIds = classNodeRepository.findAllNeighbours(maxDistance, nodeId, relationshipDirection.getValue()).stream()
             .map(ClassNodeProjection::getId)
             .toList();
 
@@ -360,7 +370,8 @@ public class ClassNodeServiceImpl implements ClassNodeService
 
     private SearchAfterParams retrieveSearchAfterParams(List<ElasticSearchClassNode> searchResult)
     {
-        if (searchResult.isEmpty()) {
+        if (searchResult.isEmpty())
+        {
             return SearchAfterParams.builder().build();
         }
 

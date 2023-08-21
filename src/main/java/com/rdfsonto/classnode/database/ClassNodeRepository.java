@@ -19,22 +19,24 @@ public interface ClassNodeRepository extends Neo4jRepository<ClassNodeVo, Long>
 
     @Query("""
         MATCH (n:Resource) WHERE id(n) = $nodeId
-        CALL apoc.neighbors.tohop(n, "<|>", $maxDistance)
+        CALL apoc.neighbors.tohop(n, $direction, $maxDistance)
         YIELD node
         RETURN node
         UNION
         MATCH (n:Resource) WHERE id(n) = $nodeId
         RETURN n as node
         """)
-    List<ClassNodeProjection> findAllNeighbours(@Param("maxDistance") int maxDistance, @Param("nodeId") long sourceNodeId);
+    List<ClassNodeProjection> findAllNeighbours(@Param("maxDistance") int maxDistance,
+                                                @Param("nodeId") long sourceNodeId,
+                                                @Param("direction") final String direction);
 
     @Query("""
         MATCH (n:Resource) WHERE id(n) = $nodeId
-        CALL apoc.neighbors.tohop.count(n, "<|>", $maxDistance)
+        CALL apoc.neighbors.tohop.count(n, $direction, $maxDistance)
         YIELD value
         RETURN value
         """)
-    int countAllNeighbours(@Param("maxDistance") int maxDistance, @Param("nodeId") long sourceNodeId);
+    int countAllNeighbours(@Param("maxDistance") int maxDistance, @Param("nodeId") long sourceNodeId, @Param("direction") String direction);
 
     @Query("""
         MATCH (n:Resource)

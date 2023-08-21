@@ -1,7 +1,12 @@
 package com.rdfsonto.classnode.rest;
 
+import static com.rdfsonto.classnode.service.ClassNodeExceptionErrorCode.INTERNAL_ERROR;
+import static com.rdfsonto.classnode.service.ClassNodeExceptionErrorCode.NEIGHBOURHOOD_TOO_BIG;
+import static com.rdfsonto.classnode.service.ClassNodeExceptionErrorCode.UNAUTHORIZED_RESOURCE_ACCESS;
+
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -17,6 +22,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.rdfsonto.classnode.database.RelationshipDirection;
 import com.rdfsonto.classnode.service.ClassNode;
 import com.rdfsonto.classnode.service.ClassNodeException;
 import com.rdfsonto.classnode.service.ClassNodeExceptionErrorCode;
@@ -56,18 +62,26 @@ public class ClassNodeController
     }
 
     @GetMapping("/neighbours/{id}")
-    ResponseEntity<?> getClassNodeNeighbours(@PathVariable final long id, @RequestParam final int maxDistance, @RequestParam final long projectId)
+    ResponseEntity<?> getClassNodeNeighbours(@PathVariable final long id,
+                                             @RequestParam final int maxDistance,
+                                             @RequestParam final long projectId,
+                                             @RequestParam final Optional<RelationshipDirection> relationshipDirection)
     {
-        final var neighbours = classNodeService.findNeighbours(projectId, id, maxDistance, List.of());
+        final var direction = relationshipDirection.orElse(RelationshipDirection.ANY);
+
+        final var neighbours = classNodeService.findNeighbours(projectId, id, maxDistance, List.of(), direction);
         return ResponseEntity.ok(neighbours);
     }
 
     @GetMapping("/neighbours/uri")
     ResponseEntity<?> getClassNodeNeighboursByUri(@RequestParam final String uri,
                                                   @RequestParam final int maxDistance,
-                                                  @RequestParam final long projectId)
+                                                  @RequestParam final long projectId,
+                                                  @RequestParam final Optional<RelationshipDirection> relationshipDirection)
     {
-        final var neighbours = classNodeService.findNeighboursByUri(projectId, uri, maxDistance, List.of());
+        final var direction = relationshipDirection.orElse(RelationshipDirection.ANY);
+
+        final var neighbours = classNodeService.findNeighboursByUri(projectId, uri, maxDistance, List.of(), direction);
         return ResponseEntity.ok(neighbours);
     }
 
@@ -124,14 +138,19 @@ public class ClassNodeController
     @ExceptionHandler(ClassNodeException.class)
     public ResponseEntity<?> handle(final ClassNodeException classNodeException)
     {
-        if (classNodeException.getErrorCode() == ClassNodeExceptionErrorCode.INTERNAL_ERROR)
+        if (classNodeException.getErrorCode() == INTERNAL_ERROR)
         {
             return ResponseEntity.internalServerError().build();
         }
 
-        if (classNodeException.getErrorCode() == ClassNodeExceptionErrorCode.UNAUTHORIZED_RESOURCE_ACCESS)
+        if (classNodeException.getErrorCode() == UNAUTHORIZED_RESOURCE_ACCESS)
         {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(classNodeException.getMessage());
+        }
+
+        if (classNodeException.getErrorCode() == NEIGHBOURHOOD_TOO_BIG)
+        {
+            return ResponseEntity.badRequest().body(List.of(NEIGHBOURHOOD_TOO_BIG, classNodeException.getValue()));
         }
 
         log.warn(classNodeException.getMessage());

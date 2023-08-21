@@ -98,5 +98,6 @@ public class RDFStreamImporter
         importer.getProcessedRdfFileForNeo4j(new URL("file:///home/jzielins/Projects/ontology-editor-backend/src/main/resources/rdfs/mesh2022.ttl"),
             "/home/jzielins/Projects/ontology-editor-backend/src/main/resources/rdfs",
             "@123@123@", RDFFormat.NTRIPLES);
+
     }
 }
