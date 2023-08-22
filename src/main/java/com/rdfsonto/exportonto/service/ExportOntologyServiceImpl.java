@@ -54,7 +54,7 @@ import lombok.extern.slf4j.Slf4j;
 class ExportOntologyServiceImpl implements ExportOntologyService
 {
     private final int BATCH_SIZE = 100_000;
-    private static final long MAX_NODE_COUNT = 20_000;
+    private static final long MAX_NODE_COUNT = 1000;
     private static final String PROJECT_LABEL_ROOT = "http://www.user_neo4j.com#";
 
     @Value("${rdf4j.downloader.workspace}")
@@ -73,7 +73,7 @@ class ExportOntologyServiceImpl implements ExportOntologyService
     private final UriRemoveUniquenessHandler uriRemoveUniquenessHandler;
     private final ProjectRepository projectRepository;
     private final WorkspaceManagementService workspaceManagementService;
-
+    private final Neo4jBigGraphSerializer neo4jBigGraphSerializer;
 
     @Override
     public ExportOntologyResult exportOntology(final long userId, final long projectId, final RDFFormat rdfFormat)
@@ -103,7 +103,7 @@ class ExportOntologyServiceImpl implements ExportOntologyService
 
             return exportedOntology;
         }
-        catch (final IOException exception)
+        catch (final IOException | InterruptedException exception)
         {
             log.error(exception.getMessage());
             throw new IllegalStateException("Failed to extract ontology to a file.");
@@ -131,7 +131,6 @@ class ExportOntologyServiceImpl implements ExportOntologyService
                 .withFileInputStream(InputStream.nullInputStream())
                 .build();
         }
-
         try
         {
             return SnapshotExport.builder()
@@ -146,7 +145,8 @@ class ExportOntologyServiceImpl implements ExportOntologyService
         }
     }
 
-    private ExtractedOntology extractOntology(final Long userId, final Long projectId, final RDFFormat rdfFormat) throws IOException
+    private ExtractedOntology extractOntology(final Long userId, final Long projectId, final RDFFormat rdfFormat)
+        throws IOException, InterruptedException
     {
         final var ontologyTag = uniqueUriIdHandler.uniquerUriTag(userId, projectId);
         final var projectLabel = PROJECT_LABEL_ROOT + ontologyTag;
@@ -168,9 +168,15 @@ class ExportOntologyServiceImpl implements ExportOntologyService
         {
             // TODO take care of bigger files
             // TODO: https://stackoverflow.com/questions/57289877/how-to-paginate-results-of-cypher-neo4j
-            saveToBigFile(exportId, projectId, userId, rdfFormat);
+            /*saveToBigFile(exportId, projectId, userId, rdfFormat);
+            extractedOntologyBuilder.withExportId(exportId);
+            extractedOntologyBuilder.withAlreadyUntagged(true);*/
+
+            extractToBigFile(exportId, projectId, userId, rdfFormat);
+            final var exportedFile = exportToBigFile(exportId, rdfFormat);
             extractedOntologyBuilder.withExportId(exportId);
             extractedOntologyBuilder.withAlreadyUntagged(true);
+            extractedOntologyBuilder.withExtractedFile(exportedFile.toFile());
         }
 
         return extractedOntologyBuilder.build();
@@ -184,11 +190,27 @@ class ExportOntologyServiceImpl implements ExportOntologyService
 
         try
         {
-            final var extractedOntologyFile = new File(exportIdToPath(exportId, rdfFormat).toString());
+            final var extractedOntologyFile = new File(exportIdToExportedPath(exportId, rdfFormat).toString());
             final var absolutePath = extractedOntologyFile.getCanonicalPath();
+
+            // TODO
+            if (extractedOntology.alreadyUntagged())
+            {
+                final var extractedFile = extractedOntology.extractedFile();
+                final var compressedFile = Paths.get(exportIdToPath(exportId, rdfFormat) + ".gz");
+                compressGzip(extractedFile.toPath(), compressedFile);
+
+                workspaceManagementService.clearWorkspace(extractedFile.getName());
+
+                return ExportOntologyResult.builder()
+                    .withExportId(exportId)
+                    .withExportedOntologyFile(compressedFile.toFile())
+                    .withInputStream(null)
+                    .build();
+            }
+
             // TODO
             // final var namespaces = prefixNodeService.findAll(projectId).map(PrefixMapping::prefixToUri).orElse(Map.of());
-
             final var namespaces = Map.of(
                 "dc", "http://purl.org/dc/elements/1.1/",
                 "obo", "http://purl.obolibrary.org/obo/",
@@ -200,20 +222,6 @@ class ExportOntologyServiceImpl implements ExportOntologyService
                 "terms", "http://purl.org/dc/terms/",
                 "oboInOwl", "http://www.geneontology.org/formats/oboInOwl#"
             );
-
-            // TODO
-            if (extractedOntology.alreadyUntagged())
-            {
-                final var compressedFile = Paths.get(extractedOntologyFile.getPath() + ".gz");
-                compressGzip(extractedOntologyFile.toPath(), compressedFile);
-
-                return ExportOntologyResult.builder()
-                    .withExportId(exportId)
-                    .withExportedOntologyFile(compressedFile.toFile())
-                    .withInputStream(null)
-                    .build();
-            }
-
             final var exportedOntologyFile = rdfExporter.prepareRdfFileForExport(Path.of(absolutePath), ontologyTag, rdfFormat, namespaces);
 
             final var inputStream = new BufferedInputStream(new FileInputStream(exportedOntologyFile));
@@ -279,6 +287,36 @@ class ExportOntologyServiceImpl implements ExportOntologyService
         outputStream.close();
     }
 
+    private Path extractToBigFile(final UUID exportId, final long projectId, final long userId, final RDFFormat rdfFormat)
+        throws IOException, InterruptedException
+    {
+        final var projectTag = uniqueUriIdHandler.uniquerUriTag(userId, projectId);
+        final var projectLabel = uriUniquenessHandler.getClassNodeLabel(projectTag);
+
+        return neo4jBigGraphSerializer.serializeBigGraph(exportId, projectLabel, rdfFormat);
+    }
+
+    private Path exportToBigFile(final UUID exportId, final RDFFormat rdfFormat) throws IOException
+    {
+        final var extractedFile = exportIdToPath(exportId, rdfFormat);
+        final var outputFile = exportIdToExportedPath(exportId, rdfFormat);
+
+        final var input = new FileInputStream(extractedFile.toFile());
+        final var output = new FileOutputStream(outputFile.toFile());
+
+        final var writer = Rio.createWriter(rdfFormat, output);
+        final var exportHandler = new RDFStreamExportHandler(writer, uriRemoveUniquenessHandler);
+
+        final var parser = Rio.createParser(rdfFormat);
+
+        parser.setRDFHandler(exportHandler);
+        parser.parse(input);
+
+        workspaceManagementService.clearWorkspace(extractedFile.getFileName().toString());
+
+        return outputFile;
+    }
+
     public static void compressGzip(Path source, Path target) throws IOException
     {
 
@@ -301,5 +339,10 @@ class ExportOntologyServiceImpl implements ExportOntologyService
     {
         final var extension = rdfFormat.getDefaultFileExtension();
         return Path.of(WORKSPACE_DIR + exportId + "." + extension);
+    }
+
+    private Path exportIdToExportedPath(final UUID exportId, final RDFFormat rdfFormat)
+    {
+        return Path.of(exportIdToPath(exportId, rdfFormat) + ".out");
     }
 }

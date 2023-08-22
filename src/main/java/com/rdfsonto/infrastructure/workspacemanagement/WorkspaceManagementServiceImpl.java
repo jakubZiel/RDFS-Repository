@@ -5,7 +5,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.UUID;
 
-import org.apache.commons.io.FilenameUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -35,15 +34,17 @@ public class WorkspaceManagementServiceImpl implements WorkspaceManagementServic
 
     public void clearWorkspace(final String fileName)
     {
-        final var baseName = FilenameUtils.getBaseName(fileName);
-        if (baseName == null)
+        if (fileName == null)
         {
             return;
         }
         try (final var filePaths = Files.list(Path.of(WORKSPACE_DIR)))
         {
-            filePaths.filter(path -> path.getFileName().toString().startsWith(baseName))
-                .forEach(this::deleteFile);
+            final var toDelete = filePaths
+                .filter(filePath -> filePath.getFileName().toString().equals(fileName))
+                .toList();
+
+            toDelete.forEach(this::deleteFile);
         }
         catch (IOException e)
         {

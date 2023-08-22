@@ -100,39 +100,6 @@ public class ExportOntologyController
         IOUtils.copy(inputStream, out);
         out.close();
         inputStream.close();
-
-        /*final var responseHeaders = new HttpHeaders();
-        responseHeaders.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"%s\"".formatted(file));
-        return new ResponseEntity<>(IOUtils.toByteArray(result), responseHeaders, HttpStatus.OK);*/
-    }
-
-    @GetMapping("/curl/cheat")
-    public void fetchFileCurl() throws IOException, InterruptedException
-    {
-        final var x = """
-                {
-                    "cypher" : "MATCH (n:Resource) WHERE NOT (n)-[]->() return n , null as r UNION MATCH (n:Resource)-[r]->() return n,r",
-                    "format" : "N-Triples"
-                }
-            """;
-
-        final var req = HttpRequest.newBuilder()
-            .uri(URI.create("http://localhost:7474/rdf/neo4j/cypher"))
-            .setHeader("Authorization", "Basic bmVvNGo6a3ViYTEyMw==")
-            .POST(HttpRequest.BodyPublishers.ofString(x))
-            .build();
-
-        final var start = System.currentTimeMillis();
-        final var res = HttpClient.newHttpClient()
-            .send(req, HttpResponse.BodyHandlers.ofInputStream());
-
-        FileOutputStream fos = new FileOutputStream("/home/jzielins/Projects/ontology-editor-backend/workspace/final.ttl");
-        fos.write(res.body().readAllBytes());
-        fos.close();
-
-        final var end = System.currentTimeMillis();
-
-        System.err.println(end - start);
     }
 
     @ExceptionHandler(ClassNodeException.class)
@@ -148,22 +115,6 @@ public class ExportOntologyController
         log.warn(classNodeException.getMessage());
         return ResponseEntity.badRequest().body(classNodeException.getErrorCode());
     }
-// TODO
-/*    private void attachFileToHttpResponse(final HttpServletResponse response,
-                                          final RDFFormat rdfFormat,
-                                          final File exportedOntologyFile,
-                                          final String requestedFileName,
-                                          final InputStream responseInputStream)
-        throws IOException
-    {
-        final var fileNameWithExtension = "%s.%s".formatted(requestedFileName, rdfFormat.getDefaultFileExtension());
-
-        response.setContentType("application/octet-stream");
-        response.setHeader("Content-Disposition", "attachment; filename=\"%s\"".formatted(fileNameWithExtension));
-        response.setContentLength((int) exportedOntologyFile.length());
-
-        FileCopyUtils.copy(responseInputStream, response.getOutputStream());
-    }*/
 
     private boolean isInvalid(final ExportOntologyRequest request)
     {

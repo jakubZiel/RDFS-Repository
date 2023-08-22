@@ -12,25 +12,30 @@ import org.eclipse.rdf4j.rio.RDFWriter;
 import com.rdfsonto.classnode.service.UriRemoveUniquenessHandler;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 
+@Slf4j
 @RequiredArgsConstructor
 public class RDFStreamExportHandler implements RDFHandler
 {
     private static final String USER_NAMESPACE = "http://www.user_neo4j.com#";
     private final RDFWriter rdfWriter;
     private final UriRemoveUniquenessHandler uriRemoveUniquenessHandler;
+    private long statementCounter;
 
     @Override
     public void startRDF() throws RDFHandlerException
     {
         rdfWriter.startRDF();
+        statementCounter = 0L;
     }
 
     @Override
     public void endRDF() throws RDFHandlerException
     {
         rdfWriter.endRDF();
+        log.info("Finished parsing : {} statements.", statementCounter);
     }
 
     @Override
@@ -60,6 +65,12 @@ public class RDFStreamExportHandler implements RDFHandler
             }
         }
 
+        statementCounter += 1;
+
+        if (statementCounter % 100_000 == 0)
+        {
+            log.info("Parsed : {} statements.", statementCounter);
+        }
         rdfWriter.handleStatement(untaggedStatement);
     }
 

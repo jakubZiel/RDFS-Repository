@@ -80,12 +80,12 @@ class RDFStreamImportHandler extends AbstractRDFHandler implements RDFHandler
         }
 
         rdfWriter.handleStatement(taggedStatement);
-        statementCounter += 1;
         previousResource = statement.getSubject();
+        statementCounter += 1;
 
         if (statementCounter % 100_000 == 0)
         {
-            log.info("Parsed : {}", statementCounter);
+            log.info("Parsed : {} statements.", statementCounter);
         }
     }
 
@@ -160,7 +160,9 @@ class RDFStreamImportHandler extends AbstractRDFHandler implements RDFHandler
     public void stop()
     {
         rdfWriter.endRDF();
+        log.info("Finished parsing : {} statements.", statementCounter);
     }
+
 
     public static void main(String[] args) throws IOException
     {

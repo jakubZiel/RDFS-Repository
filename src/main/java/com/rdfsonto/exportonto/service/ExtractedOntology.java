@@ -10,6 +10,6 @@ import lombok.Builder;
 
 
 @Builder(setterPrefix = "with")
-public record ExtractedOntology(UUID exportId, RDFFormat rdfFormat, IOException ioException, boolean alreadyUntagged, File finalFile)
+public record ExtractedOntology(UUID exportId, RDFFormat rdfFormat, IOException ioException, boolean alreadyUntagged, File extractedFile)
 {
 }
