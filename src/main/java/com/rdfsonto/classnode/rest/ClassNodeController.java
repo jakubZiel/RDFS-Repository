@@ -42,6 +42,7 @@ public class ClassNodeController
     private final AuthService authService;
     private final ClassNodeService classNodeService;
     private final NodeChangeEventHandler nodeChangeEventHandler;
+    private final ClassNodeRestMapper classNodeRestMapper;
 
     @GetMapping("/{id}")
     ResponseEntity<?> getClassNodeById(@PathVariable final long id, @RequestParam final long projectId)
@@ -88,13 +89,15 @@ public class ClassNodeController
     @PostMapping
     ResponseEntity<?> createNode(@RequestBody final ClassNode node, final long projectId)
     {
-        return ResponseEntity.ok(classNodeService.save(projectId, node));
+        final var parsed = classNodeRestMapper.mapTypes(node);
+        return ResponseEntity.ok(classNodeService.save(projectId, parsed));
     }
 
     @PutMapping
     ResponseEntity<?> updateNode(@RequestBody final ClassNode nodeUpdate, final long projectId)
     {
-        return ResponseEntity.ok(classNodeService.save(projectId, nodeUpdate));
+        final var parsed = classNodeRestMapper.mapTypes(nodeUpdate);
+        return ResponseEntity.ok(classNodeService.save(projectId, parsed));
     }
 
     @DeleteMapping("/{projectId}/{id}")
