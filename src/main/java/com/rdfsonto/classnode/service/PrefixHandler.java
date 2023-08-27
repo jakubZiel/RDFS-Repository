@@ -6,6 +6,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+import org.eclipse.rdf4j.model.base.CoreDatatype;
+import org.eclipse.rdf4j.model.vocabulary.XSD;
 import org.springframework.stereotype.Component;
 
 import com.rdfsonto.prefix.service.PrefixMapping;
@@ -26,6 +28,10 @@ class PrefixHandler
 
     List<ClassNode> applyPrefix(final List<ClassNode> classNodes, final long projectId)
     {
+        if (true)
+        {
+            return classNodes;
+        }
         final var prefixMapping = prefixNodeService.findAll(projectId).orElse(null);
 
         if (prefixMapping == null)
@@ -38,6 +44,10 @@ class PrefixHandler
 
     ProjectNodeMetadata applyPrefix(final ProjectNodeMetadata nonPrefixedMetadata, final long projectId)
     {
+        if (true)
+        {
+            return nonPrefixedMetadata;
+        }
         final var uriToPrefix = prefixNodeService.findAll(projectId).map(PrefixMapping::uriToPrefix).orElse(null);
 
         if (uriToPrefix == null)
@@ -58,6 +68,10 @@ class PrefixHandler
 
     ClassNode applyPrefix(final ClassNode classNode, final long projectId)
     {
+        if (true)
+        {
+            return classNode;
+        }
         final var prefixMapping = prefixNodeService.findAll(projectId).orElse(null);
         return applyPrefix(classNode, prefixMapping);
     }

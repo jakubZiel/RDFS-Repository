@@ -20,7 +20,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 public class RDFStreamImporter
 {
-    public Path getProcessedRdfFileForNeo4j(final URL inputURL, final String workspaceDirectory, final String tag, final RDFFormat rdfFormat)
+    public PreProcessingResult getProcessedRdfFileForNeo4j(final URL inputURL,
+                                                           final String workspaceDirectory,
+                                                           final String tag,
+                                                           final RDFFormat rdfFormat)
         throws IOException
     {
         final var originalOntologyFile = Path.of(workspaceDirectory + tag + ".input");
@@ -37,19 +40,23 @@ public class RDFStreamImporter
         final var importHandler = new RDFStreamImportHandler(outputStream, rdfFormat, tag);
 
         final var parser = Rio.createParser(rdfFormat);
+
         parser.setRDFHandler(importHandler);
 
         importHandler.start();
         parser.parse(inputStream);
         importHandler.stop();
 
-        return processedOntologyFile;
+        return PreProcessingResult.builder()
+            .withProcessedFile(processedOntologyFile)
+            .withDeclaredNamespaces(importHandler.getDeclaredNamespaces())
+            .build();
     }
 
-    public Path getProcessedRdfFileForNeo4j(final MultipartFile originalOntologyFile,
-                                            final String workspaceDirectory,
-                                            final String tag,
-                                            final RDFFormat rdfFormat)
+    public PreProcessingResult getProcessedRdfFileForNeo4j(final MultipartFile originalOntologyFile,
+                                                           final String workspaceDirectory,
+                                                           final String tag,
+                                                           final RDFFormat rdfFormat)
         throws IOException
     {
         final var processedOntologyFile = Path.of(workspaceDirectory + tag + ".output");
@@ -65,7 +72,10 @@ public class RDFStreamImporter
         parser.parse(inputStream);
         importHandler.stop();
 
-        return processedOntologyFile;
+        return PreProcessingResult.builder()
+            .withProcessedFile(processedOntologyFile)
+            .withDeclaredNamespaces(importHandler.getDeclaredNamespaces())
+            .build();
     }
 
     private File downloadFile(final URL inputURL, final Path outputFile) throws IOException

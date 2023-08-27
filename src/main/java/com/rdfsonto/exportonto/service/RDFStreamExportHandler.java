@@ -1,5 +1,7 @@
 package com.rdfsonto.exportonto.service;
 
+import java.util.Collections;
+
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.util.Statements;
@@ -10,6 +12,8 @@ import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.eclipse.rdf4j.rio.RDFWriter;
 
 import com.rdfsonto.classnode.service.UriRemoveUniquenessHandler;
+import com.rdfsonto.prefix.service.PrefixMapping;
+import com.rdfsonto.prefix.service.PrefixNodeService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -22,6 +26,8 @@ public class RDFStreamExportHandler implements RDFHandler
     private static final String USER_NAMESPACE = "http://www.user_neo4j.com#";
     private final RDFWriter rdfWriter;
     private final UriRemoveUniquenessHandler uriRemoveUniquenessHandler;
+    private final PrefixNodeService prefixNodeService;
+    private final long projectId;
     private long statementCounter;
 
     @Override
@@ -29,6 +35,12 @@ public class RDFStreamExportHandler implements RDFHandler
     {
         rdfWriter.startRDF();
         statementCounter = 0L;
+
+        final var prefixMap = prefixNodeService.findAll(projectId)
+            .map(PrefixMapping::prefixToUri)
+            .orElse(Collections.emptyMap());
+
+        prefixMap.forEach(rdfWriter::handleNamespace);
     }
 
     @Override

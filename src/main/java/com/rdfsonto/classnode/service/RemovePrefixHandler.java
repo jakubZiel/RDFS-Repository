@@ -27,12 +27,20 @@ class RemovePrefixHandler
 
     ClassNode removePrefix(final ClassNode classNode, final long projectId)
     {
+        if (true)
+        {
+            return classNode;
+        }
         final var prefixMapping = prefixNodeService.findAll(projectId).orElse(null);
         return removePrefix(classNode, prefixMapping);
     }
 
     List<String> removePrefix(final List<String> prefixedUris, final long projectId)
     {
+        if (true)
+        {
+            return prefixedUris;
+        }
         final var prefixMapping = prefixNodeService.findAll(projectId).orElse(null);
         if (prefixMapping == null)
         {
@@ -44,6 +52,11 @@ class RemovePrefixHandler
 
     String removePrefix(final String prefixedUri, final long projectId)
     {
+        if (true)
+        {
+            return prefixedUri;
+        }
+
         final var prefixMapping = prefixNodeService.findAll(projectId).orElse(null);
         if (prefixMapping == null)
         {

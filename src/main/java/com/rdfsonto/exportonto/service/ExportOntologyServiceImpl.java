@@ -26,6 +26,7 @@ import com.rdfsonto.classnode.service.UniqueUriIdHandler;
 import com.rdfsonto.classnode.service.UriRemoveUniquenessHandler;
 import com.rdfsonto.classnode.service.UriUniquenessHandler;
 import com.rdfsonto.infrastructure.workspacemanagement.WorkspaceManagementService;
+import com.rdfsonto.prefix.service.PrefixNodeService;
 import com.rdfsonto.project.database.ProjectRepository;
 import com.rdfsonto.project.service.ProjectService;
 import com.rdfsonto.user.service.UserService;
@@ -50,6 +51,7 @@ class ExportOntologyServiceImpl implements ExportOntologyService
     private final ProjectRepository projectRepository;
     private final WorkspaceManagementService workspaceManagementService;
     private final Neo4jBigGraphSerializer neo4jBigGraphSerializer;
+    private final PrefixNodeService prefixNodeService;
 
     @Override
     public ExportOntologyResult exportOntology(final long userId, final long projectId, final RDFFormat rdfFormat)
@@ -130,7 +132,7 @@ class ExportOntologyServiceImpl implements ExportOntologyService
         final var exportId = UUID.randomUUID();
 
         final var extractedFile = extractToBigFile(exportId, projectId, userId, rdfFormat);
-        final var exportedFile = exportToBigFile(extractedFile, exportId, rdfFormat);
+        final var exportedFile = exportToBigFile(extractedFile, exportId, projectId, rdfFormat);
 
         extractedOntologyBuilder.withExportId(exportId);
         extractedOntologyBuilder.withExtractedFile(exportedFile.toFile());
@@ -173,7 +175,7 @@ class ExportOntologyServiceImpl implements ExportOntologyService
         return neo4jBigGraphSerializer.serializeBigGraph(exportId, projectLabel, rdfFormat);
     }
 
-    private Path exportToBigFile(final Path extractedFile, final UUID exportId, final RDFFormat rdfFormat) throws IOException
+    private Path exportToBigFile(final Path extractedFile, final UUID exportId, final long projectId, final RDFFormat rdfFormat) throws IOException
     {
         final var outputFile = exportIdToExportedPath(exportId, rdfFormat);
 
@@ -183,7 +185,7 @@ class ExportOntologyServiceImpl implements ExportOntologyService
         final var writer = Rio.createWriter(rdfFormat, output);
 
         // TODO handle namespaces
-        final var exportHandler = new RDFStreamExportHandler(writer, uriRemoveUniquenessHandler);
+        final var exportHandler = new RDFStreamExportHandler(writer, uriRemoveUniquenessHandler, prefixNodeService, projectId);
 
         final var parser = Rio.createParser(rdfFormat);
 

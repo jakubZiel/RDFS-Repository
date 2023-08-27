@@ -55,6 +55,7 @@ class ImportOntologyServiceImpl implements ImportOntologyService
     private final ElasticSearchClassNodeBulkService elasticSearchClassNodeBulkService;
 
     @Override
+    @Transactional
     public ImportOntologyResult importOntology(final URL source, final RDFFormat rdfFormat, final Long userId, final Long projectId)
     {
         userService.findById(userId)
@@ -88,8 +89,8 @@ class ImportOntologyServiceImpl implements ImportOntologyService
         return importResult;
     }
 
-
     @Override
+    @Transactional
     public ImportOntologyResult importOntology(final MultipartFile file, final RDFFormat rdfFormat, final Long userId, final Long projectId)
     {
         userService.findById(userId)
@@ -111,16 +112,19 @@ class ImportOntologyServiceImpl implements ImportOntologyService
         try
         {
             final var rdf4jStreamDownloader = new RDFStreamImporter();
-            final var output = rdf4jStreamDownloader.getProcessedRdfFileForNeo4j(file, WORKSPACE_DIR, ontologyTag, validRdfFormat);
+            final var preProcessingResult = rdf4jStreamDownloader.getProcessedRdfFileForNeo4j(file, WORKSPACE_DIR, ontologyTag, validRdfFormat);
 
             final var downloadedOntology = DownloadedOntology.builder()
-                .withPath(output)
+                .withPath(preProcessingResult.processedFile())
+                .withDeclaredNamespaces(preProcessingResult.declaredNamespaces())
                 .withRdfFormat(validRdfFormat)
                 .build();
 
             log.info("Started importing ontology from file : {}", file.getName());
             final var importResult = importOntology(downloadedOntology);
             referencedResourceHandler.findAndLabelReferencedResources(projectId);
+
+            prefixNodeService.save(projectId, downloadedOntology.declaredNamespaces());
 
             if (!importResult.getTerminationStatus().equals("OK") || importResult.getTriplesLoaded() <= 0)
             {
@@ -132,9 +136,9 @@ class ImportOntologyServiceImpl implements ImportOntologyService
             log.info("Imported file into Elasticsearch");
             return importResult;
         }
-        catch (Exception e)
+        catch (final Exception e)
         {
-            e.printStackTrace();
+            log.error("Failed to upload a file.", e);
             throw new IllegalStateException("Failed to upload file.");
         }
     }
@@ -152,10 +156,11 @@ class ImportOntologyServiceImpl implements ImportOntologyService
             {
                 final var rdf4jStreamDownloader = new RDFStreamImporter();
 
-                final var outputFile = rdf4jStreamDownloader.getProcessedRdfFileForNeo4j(source, WORKSPACE_DIR, ontologyTag, rdfFormat);
+                final var preProcessingResult = rdf4jStreamDownloader.getProcessedRdfFileForNeo4j(source, WORKSPACE_DIR, ontologyTag, rdfFormat);
 
                 return DownloadedOntology.builder()
-                    .withPath(outputFile)
+                    .withPath(preProcessingResult.processedFile())
+                    .withDeclaredNamespaces(preProcessingResult.declaredNamespaces())
                     .withRdfFormat(rdfFormat)
                     .build();
             }
