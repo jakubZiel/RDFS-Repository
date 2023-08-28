@@ -24,7 +24,9 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.reactive.function.client.WebClient;
 
+import com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepository;
 import com.rdfsonto.classnode.service.UniqueUriIdHandler;
+import com.rdfsonto.classnode.service.UriUniquenessHandler;
 import com.rdfsonto.elastic.service.ElasticSearchClassNodeBulkService;
 import com.rdfsonto.importonto.database.ImportOntologyRepository;
 import com.rdfsonto.importonto.database.ImportOntologyResult;
@@ -53,6 +55,8 @@ class ImportOntologyServiceImpl implements ImportOntologyService
     private final UniqueUriIdHandler uniqueUriIdHandler;
     private final ReferencedResourceHandler referencedResourceHandler;
     private final ElasticSearchClassNodeBulkService elasticSearchClassNodeBulkService;
+    private final ClassNodeNeo4jDriverRepository classNodeNeo4jDriverRepository;
+    private final UriUniquenessHandler uriUniquenessHandler;
 
     @Override
     @Transactional
@@ -80,6 +84,8 @@ class ImportOntologyServiceImpl implements ImportOntologyService
 
         if (!importResult.getTerminationStatus().equals("OK") || importResult.getTriplesLoaded() <= 0)
         {
+            final var ontologyTag = projectService.getProjectTag(project);
+            classNodeNeo4jDriverRepository.deleteAllNodesByProjectLabel(uriUniquenessHandler.getClassNodeLabel(ontologyTag));
             throw new ImportOntologyException("Failed to import ontology.", FAILED_ONTOLOGY_IMPORT);
         }
 
@@ -128,6 +134,7 @@ class ImportOntologyServiceImpl implements ImportOntologyService
 
             if (!importResult.getTerminationStatus().equals("OK") || importResult.getTriplesLoaded() <= 0)
             {
+                classNodeNeo4jDriverRepository.deleteAllNodesByProjectLabel(uriUniquenessHandler.getClassNodeLabel(ontologyTag));
                 throw new ImportOntologyException("Failed to import ontology: %s.".formatted(importResult), FAILED_ONTOLOGY_IMPORT);
             }
 
