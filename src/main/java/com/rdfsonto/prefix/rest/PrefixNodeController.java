@@ -2,6 +2,8 @@ package com.rdfsonto.prefix.rest;
 
 import java.util.Map;
 
+import javax.annotation.security.RolesAllowed;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -23,6 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RestController
+@RolesAllowed("user")
 @RequiredArgsConstructor
 @RequestMapping("/neo4j/prefix")
 public class PrefixNodeController

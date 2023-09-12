@@ -4,6 +4,7 @@ import static com.rdfsonto.classnode.service.ClassNodeExceptionErrorCode.INVALID
 
 import java.io.IOException;
 
+import javax.annotation.security.RolesAllowed;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.io.IOUtils;
@@ -29,6 +30,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @RestController
+@RolesAllowed("user")
 @RequiredArgsConstructor
 @RequestMapping("/neo4j/export")
 public class ExportOntologyController
