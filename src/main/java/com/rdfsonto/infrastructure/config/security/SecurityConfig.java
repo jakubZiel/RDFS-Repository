@@ -11,7 +11,9 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.core.Ordered;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.core.authority.mapping.SimpleAuthorityMapper;
 import org.springframework.security.core.session.SessionRegistryImpl;
 import org.springframework.security.web.authentication.session.RegisterSessionAuthenticationStrategy;
 import org.springframework.security.web.authentication.session.SessionAuthenticationStrategy;
@@ -21,12 +23,16 @@ import org.springframework.web.filter.CorsFilter;
 
 
 @KeycloakConfiguration
+@EnableGlobalMethodSecurity(jsr250Enabled = true)
 public class SecurityConfig extends KeycloakWebSecurityConfigurerAdapter
 {
     @Autowired
-    void configureGlobal(final AuthenticationManagerBuilder authenticationManagerBuilder, final KeycloakAuthenticationProvider keycloakAuthProvider)
+    void configureGlobal(final AuthenticationManagerBuilder authenticationManagerBuilder)
     {
-        authenticationManagerBuilder.authenticationProvider(keycloakAuthProvider);
+        final var authProvider = new KeycloakAuthenticationProvider();
+        authProvider.setGrantedAuthoritiesMapper(new SimpleAuthorityMapper());
+
+        authenticationManagerBuilder.authenticationProvider(authProvider);
     }
 
     @Override

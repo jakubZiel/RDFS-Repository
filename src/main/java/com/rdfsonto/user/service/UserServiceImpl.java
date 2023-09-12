@@ -30,6 +30,12 @@ public class UserServiceImpl implements UserService
     }
 
     @Override
+    public Optional<UserNode> findByKeycloakId(final String keycloakId)
+    {
+        return userRepository.findByKeycloakId(keycloakId);
+    }
+
+    @Override
     public Optional<UserNode> findByUsername(final String username)
     {
         return userRepository.findByUsername(username);

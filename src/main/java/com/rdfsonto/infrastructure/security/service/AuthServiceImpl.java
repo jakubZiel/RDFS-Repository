@@ -1,12 +1,18 @@
 package com.rdfsonto.infrastructure.security.service;
 
-import java.util.Collection;
+import static com.rdfsonto.classnode.service.ClassNodeExceptionErrorCode.UNAUTHORIZED_RESOURCE_ACCESS;
 
-import org.apache.commons.lang3.NotImplementedException;
+import java.util.Collection;
+import java.util.List;
+import java.util.Optional;
+
 import org.keycloak.KeycloakPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
+import com.rdfsonto.classnode.database.ClassNodeRepository;
+import com.rdfsonto.classnode.service.ClassNodeException;
+import com.rdfsonto.classnode.service.UriUniquenessHandler;
 import com.rdfsonto.project.database.ProjectNode;
 import com.rdfsonto.user.database.UserNode;
 import com.rdfsonto.user.service.UserService;
@@ -21,8 +27,10 @@ import net.minidev.json.parser.ParseException;
 @RequiredArgsConstructor
 class AuthServiceImpl implements AuthService
 {
-    final AuthKeycloakClient authKeycloakClient;
-    final UserService userService;
+    private final AuthKeycloakClient authKeycloakClient;
+    private final UserService userService;
+    private final UriUniquenessHandler uriUniquenessHandler;
+    private final ClassNodeRepository classNodeRepository;
 
     @Override
     public KeycloakUser save(final KeycloakUser createKeycloakUserRequest)
@@ -39,36 +47,75 @@ class AuthServiceImpl implements AuthService
     }
 
     @Override
-    public boolean validateResourceRights(final Long resourceId, final Long userId, final Class<?> resourceType)
+    public void validateUserAccess(final Long userId)
     {
-        if (resourceType.equals(ProjectNode.class))
-        {
-            return validateProjectRights(resourceId, userId);
-        }
-
-        throw new NotImplementedException("Handling of resource type: %s is not implemented.".formatted(resourceType.getName()));
+        final var keycloakId = getKeycloakId().orElse(null);
+        userService.findByKeycloakId(keycloakId)
+            .orElseThrow(() -> new ClassNodeException("Unauthorized access to user with id : %s".formatted(userId), UNAUTHORIZED_RESOURCE_ACCESS));
     }
 
-    private boolean validateProjectRights(final Long projectId, final Long userId)
+    @Override
+    public void validateNodeAccess(final List<Long> nodeIds)
+    {
+        final var nodes = classNodeRepository.findAllByIdIn(nodeIds);
+        if (nodes.isEmpty())
+        {
+            return;
+        }
+
+        final var dominantNode = nodes.get(0);
+        final var inferredProjectId = uriUniquenessHandler.getProjectIdFromLabels(dominantNode.getClassLabels())
+            .orElseThrow(() -> new IllegalStateException("Node id : %s without project label.".formatted(nodes.get(0).getId())));
+
+        final var nodesWithDifferentProject = nodes.stream()
+            .filter(node -> !inferredProjectId.equals(uriUniquenessHandler.getProjectIdFromLabels(node.getClassLabels()).orElse(null)))
+            .findAny();
+
+        if (nodesWithDifferentProject.isPresent())
+        {
+            throw new ClassNodeException("Unauthorized access to nodes with id : %s".formatted(nodeIds), UNAUTHORIZED_RESOURCE_ACCESS);
+        }
+
+        try
+        {
+            validateProjectAccess(inferredProjectId);
+        }
+        catch (final ClassNodeException classNodeException)
+        {
+            throw new ClassNodeException("Unauthorized access to nodes with id : %s".formatted(nodeIds), UNAUTHORIZED_RESOURCE_ACCESS);
+        }
+    }
+
+    @Override
+    public void validateProjectAccess(final Long projectId)
+    {
+        final var keycloakId = getKeycloakId().orElse(null);
+
+        final var isOwned = userService.findByKeycloakId(keycloakId).stream()
+            .map(UserNode::getProjectSet)
+            .flatMap(Collection::stream)
+            .map(ProjectNode::getId)
+            .anyMatch(id -> id.equals(projectId));
+
+        if (!isOwned)
+        {
+            throw new ClassNodeException("Unauthorized access to project with id : %s".formatted(projectId), UNAUTHORIZED_RESOURCE_ACCESS);
+        }
+    }
+
+    private Optional<String> getKeycloakId()
     {
         final var auth = SecurityContextHolder.getContext().getAuthentication();
         final var principal = auth.getPrincipal();
 
         if (!(principal instanceof final KeycloakPrincipal<?> keycloakPrincipal))
         {
-            return false;
+            return Optional.empty();
         }
 
-        final var subject = keycloakPrincipal
+        return Optional.of(keycloakPrincipal
             .getKeycloakSecurityContext()
             .getToken()
-            .getSubject();
-
-        return userService.findById(userId).stream()
-            .filter(u -> u.getKeycloakId().equals(subject))
-            .map(UserNode::getProjectSet)
-            .flatMap(Collection::stream)
-            .map(ProjectNode::getId)
-            .anyMatch(id -> id.equals(projectId));
+            .getSubject());
     }
 }

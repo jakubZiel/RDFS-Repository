@@ -10,6 +10,8 @@ public interface UserService
 {
     Optional<UserNode> findById(long userId);
 
+    Optional<UserNode> findByKeycloakId(String keycloakId);
+
     Optional<UserNode> findByUsername(String username);
 
     List<UserNode> findAll();

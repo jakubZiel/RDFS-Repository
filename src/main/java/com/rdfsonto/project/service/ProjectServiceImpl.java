@@ -10,7 +10,6 @@ import com.rdfsonto.classnode.database.ClassNodeNeo4jDriverRepository;
 import com.rdfsonto.classnode.service.UniqueUriIdHandler;
 import com.rdfsonto.classnode.service.UriUniquenessHandler;
 import com.rdfsonto.elastic.service.ElasticSearchClassNodeService;
-import com.rdfsonto.infrastructure.security.service.AuthService;
 import com.rdfsonto.prefix.database.PrefixNodeRepository;
 import com.rdfsonto.project.database.ProjectNode;
 import com.rdfsonto.project.database.ProjectRepository;
@@ -27,7 +26,6 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class ProjectServiceImpl implements ProjectService
 {
-    private final AuthService authService;
     private final PrefixNodeRepository prefixNodeRepository;
     private final ProjectRepository projectRepository;
     private final ClassNodeNeo4jDriverRepository classNodeNeo4jDriverRepository;

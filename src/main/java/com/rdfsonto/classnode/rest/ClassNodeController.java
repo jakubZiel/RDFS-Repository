@@ -44,16 +44,20 @@ public class ClassNodeController
     private final NodeChangeEventHandler nodeChangeEventHandler;
     private final ClassNodeRestMapper classNodeRestMapper;
 
-    @GetMapping("/{id}")
-    ResponseEntity<?> getClassNodeById(@PathVariable final long id, @RequestParam final long projectId)
+    @GetMapping("/{nodeId}")
+    ResponseEntity<?> getClassNodeById(@PathVariable final long nodeId, @RequestParam final long projectId)
     {
-        final var node = classNodeService.findById(projectId, id);
+        authService.validateNodeAccess(List.of(nodeId));
+
+        final var node = classNodeService.findById(projectId, nodeId);
         return node.isPresent() ? ResponseEntity.of(node) : ResponseEntity.notFound().build();
     }
 
     @PostMapping("/ids")
     ResponseEntity<?> getClassNodesById(@RequestParam final long projectId, @RequestBody final List<Long> nodeIds)
     {
+        authService.validateNodeAccess(nodeIds);
+
         if (nodeIds == null || nodeIds.isEmpty())
         {
             return ResponseEntity.ok(Collections.emptyList());
@@ -62,15 +66,17 @@ public class ClassNodeController
         return ResponseEntity.ok(classNodeService.findByIds(projectId, nodeIds));
     }
 
-    @GetMapping("/neighbours/{id}")
-    ResponseEntity<?> getClassNodeNeighbours(@PathVariable final long id,
+    @GetMapping("/neighbours/{nodeId}")
+    ResponseEntity<?> getClassNodeNeighbours(@PathVariable final long nodeId,
                                              @RequestParam final int maxDistance,
                                              @RequestParam final long projectId,
                                              @RequestParam final Optional<RelationshipDirection> relationshipDirection)
     {
+        authService.validateNodeAccess(List.of(nodeId));
+
         final var direction = relationshipDirection.orElse(RelationshipDirection.ANY);
 
-        final var neighbours = classNodeService.findNeighbours(projectId, id, maxDistance, List.of(), direction);
+        final var neighbours = classNodeService.findNeighbours(projectId, nodeId, maxDistance, List.of(), direction);
         return ResponseEntity.ok(neighbours);
     }
 
@@ -89,6 +95,8 @@ public class ClassNodeController
     @PostMapping
     ResponseEntity<?> createNode(@RequestBody final ClassNode node, final long projectId)
     {
+        authService.validateProjectAccess(projectId);
+
         final var parsed = classNodeRestMapper.mapTypes(node);
         return ResponseEntity.ok(classNodeService.save(projectId, parsed));
     }
@@ -96,14 +104,18 @@ public class ClassNodeController
     @PutMapping
     ResponseEntity<?> updateNode(@RequestBody final ClassNode nodeUpdate, final long projectId)
     {
+        authService.validateNodeAccess(List.of(nodeUpdate.id()));
+
         final var parsed = classNodeRestMapper.mapTypes(nodeUpdate);
         return ResponseEntity.ok(classNodeService.save(projectId, parsed));
     }
 
-    @DeleteMapping("/{projectId}/{id}")
-    ResponseEntity<?> deleteNode(@PathVariable final long projectId, @PathVariable final long id)
+    @DeleteMapping("/{projectId}/{nodeId}")
+    ResponseEntity<?> deleteNode(@PathVariable final long projectId, @PathVariable final long nodeId)
     {
-        classNodeService.deleteById(projectId, id);
+        authService.validateNodeAccess(List.of(nodeId));
+
+        classNodeService.deleteById(projectId, nodeId);
         return ResponseEntity.noContent().build();
     }
 
@@ -120,12 +132,16 @@ public class ClassNodeController
     @GetMapping("/metadata")
     ResponseEntity<?> getProjectNodeMetaData(@RequestParam final long projectId)
     {
+        authService.validateProjectAccess(projectId);
+
         return ResponseEntity.ok(classNodeService.findProjectNodeMetaData(projectId));
     }
 
     @PostMapping("/filter")
     ResponseEntity<?> getNodesFiltered(@RequestBody final FilterPropertyRequest request, final Pageable pageable)
     {
+        authService.validateProjectAccess(request.projectId());
+
         final var result = classNodeService.findByPropertiesAndLabels(
             request.projectId(),
             request.labels(),
@@ -134,7 +150,6 @@ public class ClassNodeController
             pageable,
             request.searchAfter());
 
-        // TODO validation aspect
         return ResponseEntity.ok(result);
     }
 
@@ -148,7 +163,7 @@ public class ClassNodeController
 
         if (classNodeException.getErrorCode() == UNAUTHORIZED_RESOURCE_ACCESS)
         {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(classNodeException.getMessage());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(classNodeException.getMessage());
         }
 
         if (classNodeException.getErrorCode() == NEIGHBOURHOOD_TOO_BIG)

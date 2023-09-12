@@ -7,6 +7,7 @@ import java.io.IOException;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.commons.io.IOUtils;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.rdfsonto.classnode.service.ClassNodeException;
 import com.rdfsonto.classnode.service.ClassNodeExceptionErrorCode;
 import com.rdfsonto.exportonto.service.ExportOntologyService;
+import com.rdfsonto.infrastructure.security.service.AuthService;
 import com.rdfsonto.rdf4j.RdfFormatParser;
 
 import lombok.RequiredArgsConstructor;
@@ -31,11 +33,14 @@ import lombok.extern.slf4j.Slf4j;
 @RequestMapping("/neo4j/export")
 public class ExportOntologyController
 {
+    private final AuthService authService;
     private final ExportOntologyService exportOntologyService;
 
     @PostMapping
     public ResponseEntity<?> exportRdfResource(@RequestBody final ExportOntologyRequest exportOntologyRequest)
     {
+        authService.validateProjectAccess(exportOntologyRequest.projectId());
+
         if (isInvalid(exportOntologyRequest))
         {
             log.warn("Invalid export ontology request: {}", exportOntologyRequest);
@@ -51,7 +56,7 @@ public class ExportOntologyController
     @GetMapping(value = "/file/{userId}/{projectId}")
     public void getFile(@PathVariable final Long projectId, @PathVariable final Long userId, final HttpServletResponse response) throws IOException
     {
-        // TODO add rights validation
+        authService.validateProjectAccess(projectId);
 
         final var snapshot = exportOntologyService.provideExportedSnapshot(userId, projectId);
         final var inputStream = snapshot.fileInputStream();
@@ -69,6 +74,11 @@ public class ExportOntologyController
     @ExceptionHandler(ClassNodeException.class)
     public ResponseEntity<?> handle(final ClassNodeException classNodeException)
     {
+        if (classNodeException.getErrorCode() == ClassNodeExceptionErrorCode.UNAUTHORIZED_RESOURCE_ACCESS)
+        {
+            log.warn("Unauthorized access to project", classNodeException);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
 
         if (classNodeException.getErrorCode() == ClassNodeExceptionErrorCode.INTERNAL_ERROR)
         {

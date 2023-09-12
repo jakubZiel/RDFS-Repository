@@ -99,6 +99,13 @@ public class UriUniquenessHandler
         return USER_NAMESPACE_LABEL_PREFIX + "#" + projectTag;
     }
 
-
+    public Optional<Long> getProjectIdFromLabels(final List<String> nodeLabels)
+    {
+        return nodeLabels.stream()
+            .filter(label -> label.startsWith(USER_NAMESPACE_LABEL_PREFIX))
+            .map(label -> label.replace(USER_NAMESPACE_LABEL_PREFIX + "#", ""))
+            .map(tag -> Long.valueOf(tag.split("@")[2]))
+            .findFirst();
+    }
 }
 
